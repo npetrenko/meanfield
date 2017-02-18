@@ -73,8 +73,6 @@ class Model():
             self.loss_final = True
 
         for epoch in range(nepoch):
-            if epoch % 20 == 0:
-                gc.collect()
             if epoch % log_freq == 0:
                 preds = self.predict(X, samplesize=20)
                 train_mse = np.sqrt(np.mean((preds-y) ** 2))
@@ -90,9 +88,13 @@ class Model():
                                   self.input.input: in_tens[:, batchsize * i:batchsize * (i + 1), :],
                                   self.y_ph: in_tens_y[:, batchsize * i:batchsize * (i + 1), :]
                               })
+                gc.collect()
             shuffle = np.random.permutation(in_tens.shape[1])
+            gc.collect()
             in_tens = in_tens[:, shuffle, :]
+            gc.collect()
             in_tens_y = in_tens_y[:, shuffle, :]
+            gc.collect()
 
     def predict(self, X, samplesize=50, return_distrib=False):
         n = int(samplesize / sample_size) + 1
