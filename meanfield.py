@@ -59,7 +59,7 @@ class Model():
 
         self.sess.run(tf.initialize_all_variables())
 
-    def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None):
+    def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1):
         in_tens = np.repeat([X], sample_size, axis=0).reshape((sample_size, -1, 1))
         in_tens_y = np.repeat([y], sample_size, axis=0).reshape((sample_size, -1, 1))
         nbatch = int(len(X)/batchsize)
@@ -88,13 +88,13 @@ class Model():
                                   self.input.input: in_tens[:, batchsize * i:batchsize * (i + 1), :],
                                   self.y_ph: in_tens_y[:, batchsize * i:batchsize * (i + 1), :]
                               })
+
+            if epoch % shuffle_freq == 0:
+                shuffle = np.random.permutation(in_tens.shape[1])
                 gc.collect()
-            shuffle = np.random.permutation(in_tens.shape[1])
-            gc.collect()
-            in_tens = in_tens[:, shuffle, :]
-            gc.collect()
-            in_tens_y = in_tens_y[:, shuffle, :]
-            gc.collect()
+                in_tens = in_tens[:, shuffle, :]
+                in_tens_y = in_tens_y[:, shuffle, :]
+
 
     def predict(self, X, samplesize=50, return_distrib=False):
         n = int(samplesize / sample_size) + 1
