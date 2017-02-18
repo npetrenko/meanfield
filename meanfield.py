@@ -78,9 +78,9 @@ class Model():
                 if valid_set is not None:
                     preds = self.predict(valid_set[0])
                     valid_mse = np.sqrt(np.mean((preds - valid_set[1]) ** 2))
-                    print('epoch: {} \n train error: {} \n valid_error: {} \n\n\n'.format((epoch, train_mse, valid_mse)))
+                    print('epoch: {} \n train error: {} \n valid_error: {} \n\n\n'.format(epoch, train_mse, valid_mse))
                 else:
-                    print('epoch: {} \n train error: {} \n\n\n'.format((epoch, train_mse)))
+                    print('epoch: {} \n train error: {} \n\n\n'.format(epoch, train_mse))
             for i in range(nbatch):
                 self.sess.run(self.optimizer,
                               feed_dict={
