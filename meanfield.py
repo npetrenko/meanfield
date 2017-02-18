@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from math import pi
+import gc
 
 sample_size = 1
 
@@ -72,11 +73,12 @@ class Model():
             self.loss_final = True
 
         for epoch in range(nepoch):
+            gc.collect()
             if epoch % log_freq == 0:
-                preds = self.predict(X)
+                preds = self.predict(X, samplesize=20)
                 train_mse = np.sqrt(np.mean((preds-y) ** 2))
                 if valid_set is not None:
-                    preds = self.predict(valid_set[0])
+                    preds = self.predict(valid_set[0], samplesize=20)
                     valid_mse = np.sqrt(np.mean((preds - valid_set[1]) ** 2))
                     print('epoch: {} \n train error: {} \n valid_error: {} \n\n\n'.format(epoch, train_mse, valid_mse))
                 else:
