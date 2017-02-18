@@ -58,7 +58,7 @@ class Model():
 
         self.sess.run(tf.initialize_all_variables())
 
-    def fit(self, X, y, nepoch, batchsize):
+    def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None):
         in_tens = np.repeat([X], sample_size, axis=0).reshape((sample_size, -1, 1))
         in_tens_y = np.repeat([y], sample_size, axis=0).reshape((sample_size, -1, 1))
         nbatch = int(len(X)/batchsize)
@@ -72,6 +72,15 @@ class Model():
             self.loss_final = True
 
         for epoch in range(nepoch):
+            if epoch % log_freq == 0:
+                preds = self.predict(X)
+                train_mse = np.sqrt(np.mean((preds-y) ** 2))
+                if valid_set is not None:
+                    preds = self.predict(valid_set[0])
+                    valid_mse = np.sqrt(np.mean((preds - valid_set[1]) ** 2))
+                    print('epoch: {} \n train error: {} \n valid_error: {} \n\n\n'.format((epoch, train_mse, valid_mse)))
+                else:
+                    print('epoch: {} \n train error: {} \n\n\n'.format((epoch, train_mse)))
             for i in range(nbatch):
                 self.sess.run(self.optimizer,
                               feed_dict={
@@ -82,7 +91,7 @@ class Model():
             in_tens = in_tens[:, shuffle, :]
             in_tens_y = in_tens_y[:, shuffle, :]
 
-    def predict(self, X, samplesize=sample_size, return_distrib=False):
+    def predict(self, X, samplesize=50, return_distrib=False):
         n = int(samplesize / sample_size) + 1
         X = np.repeat([X], sample_size, axis=0).reshape((sample_size, -1, 1))
         preds = None
