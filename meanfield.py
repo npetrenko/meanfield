@@ -73,7 +73,8 @@ class Model():
             self.loss_final = True
 
         for epoch in range(nepoch):
-            gc.collect()
+            if epoch % 20 == 0:
+                gc.collect()
             if epoch % log_freq == 0:
                 preds = self.predict(X, samplesize=20)
                 train_mse = np.sqrt(np.mean((preds-y) ** 2))
