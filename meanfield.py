@@ -129,6 +129,7 @@ class Model(Network):
             loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * 5 ** 2) + self.var_loss / (nbatch * 1.)
             loss = loss / sample_size
             self.loss = loss
+            self.batchsize = batchsize
 
         for epoch in range(nepoch):
 
