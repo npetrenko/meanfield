@@ -29,7 +29,7 @@ class Dense(Layer):
         shape = [self.inp_dim, self.dim]
         self.mean = tf.Variable(np.random.normal(size=shape, scale=0.05), dtype=tf.float32)
         self.sigma = tf.Variable(np.random.normal(size=shape, scale=0.01, loc=0), dtype=tf.float32)
-        self.sigma = tf.log(tf.exp(self.sigma + 1) + 0.1)
+        self.sigma = tf.log(tf.exp(self.sigma + 0.1) + 0.1)
 
         self.mean_const = tf.Variable(np.random.normal(size=dim, scale=0.05), dtype=tf.float32)
         self.sigma_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
@@ -63,11 +63,11 @@ class Dense(Layer):
 
 class Input(Layer):
     def __init__(self, dim):
-        sample_size = self.sample_size
         '''
         :param dim: number of sensors in the first layer
         :param sample_size: size of sample on monte carlo step
         '''
+        sample_size = self.sample_size
         self.input = tf.placeholder(shape=tuple([sample_size, None] + [dim]), dtype=tf.float32)
         self.output = self.input
         self.dim = dim
