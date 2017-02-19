@@ -13,6 +13,7 @@ class Layer(Network):
 
 
 class Dense(Layer):
+    initial_sigma = 0.1
     def __init__(self, dim, input_layer, act=tf.nn.relu, prior=3):
         '''
         :param dim: number of neurons in the layer
@@ -29,11 +30,11 @@ class Dense(Layer):
         shape = [self.inp_dim, self.dim]
         self.mean = tf.Variable(np.random.normal(size=shape, scale=0.05), dtype=tf.float32)
         self.sigma = tf.Variable(np.random.normal(size=shape, scale=0.01, loc=0), dtype=tf.float32)
-        self.sigma = tf.log(tf.exp(self.sigma + 0.1) + 0.1)
+        self.sigma = tf.log(tf.exp(self.sigma + self.initial_sigma) + 0.1)
 
         self.mean_const = tf.Variable(np.random.normal(size=dim, scale=0.05), dtype=tf.float32)
         self.sigma_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
-        self.sigma_const = tf.log(tf.exp(self.sigma_const + 0.1) + 1)
+        self.sigma_const = tf.log(tf.exp(self.sigma_const + self.initial_sigma) + 1)
 
         # sample of activation matrixes and biases
         activation_matrix = tf.random_normal(shape=[sample_size] + shape, dtype=tf.float32,
