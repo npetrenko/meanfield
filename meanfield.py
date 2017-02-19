@@ -3,10 +3,17 @@ import numpy as np
 from math import pi
 import gc
 
-sample_size = 1
 
-class Dense():
-    def __init__(self, dim, input_layer, act=tf.nn.relu, samp_size=sample_size, prior=3):
+class Network():
+    sample_size = 1
+
+
+class Layer(Network):
+    pass
+
+
+class Dense(Layer):
+    def __init__(self, dim, input_layer, act=tf.nn.relu, prior=3):
         '''
         :param dim: number of neurons in the layer
         :param input_layer: input layer calss object
@@ -15,6 +22,7 @@ class Dense():
         :param prior: standard deviation of prior
         '''
 
+        sample_size = self.sample_size
         self.dim = dim
         self.inp_dim = input_layer.dim
 
@@ -27,14 +35,14 @@ class Dense():
         self.sigma_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
         self.sigma_const = tf.log(tf.exp(self.sigma_const + 0.1) + 1)
 
-        #sample of activation matrixes and biases
-        activation_matrix = tf.random_normal(shape=[samp_size] + shape, dtype=tf.float32,
+        # sample of activation matrixes and biases
+        activation_matrix = tf.random_normal(shape=[sample_size] + shape, dtype=tf.float32,
                                              stddev=1) * self.sigma + self.mean
-        bias = tf.random_normal(shape=[samp_size, 1, dim], dtype=tf.float32, stddev=1) * self.sigma_const + self.mean_const
+        bias = tf.random_normal(shape=[sample_size, 1, dim], dtype=tf.float32, stddev=1) * self.sigma_const + self.mean_const
 
-        #calculate matrix multiplication for each sample
+        # calculate matrix multiplication for each sample
         l = []
-        for i in range(samp_size):
+        for i in range(sample_size):
             temp = tf.matmul(input_layer.output[i], activation_matrix[i])
             l.append(temp)
         temp = tf.pack(l, axis=0)
@@ -42,20 +50,21 @@ class Dense():
         self.output = act(temp + bias)
         print(self.output)
 
-        #...
+        # ...
         l1 = tf.reduce_sum(-tf.log(np.sqrt(2 * pi) * self.sigma)) + tf.reduce_sum(
             -tf.log(np.sqrt(2 * pi) * self.sigma_const))
-        #prior loss
+        # prior loss
         l2 = (tf.reduce_sum(-activation_matrix ** 2) + tf.reduce_sum(- bias ** 2)) / (2 * prior)
 
-        #feeding loss to the next layer
+        # feeding loss to the next layer
         self.loss = l1 - l2
         self.loss += input_layer.loss
 
-class Input():
-    def __init__(self, dim, sample_size=sample_size):
-        '''
 
+class Input(Layer):
+    def __init__(self, dim):
+        sample_size = self.sample_size
+        '''
         :param dim: number of sensors in the first layer
         :param sample_size: size of sample on monte carlo step
         '''
@@ -64,7 +73,8 @@ class Input():
         self.dim = dim
         self.loss = 0
 
-class Model():
+
+class Model(Network):
 
     def terminate(self):
         '''
@@ -78,13 +88,14 @@ class Model():
         :param output: output node of the network
         :param optimizer: tensorflow optimizer
         '''
+        sample_size = self.sample_size
         self.sess = tf.Session()
         self.loss = output.loss
 
-        #create placeholder for ys
+        # create placeholder for ys
         self.y_ph = tf.placeholder(shape=(sample_size, None, 1), dtype=tf.float32)
 
-        #parameter which helps to build the final loss
+        # parameter which helps to build the final loss
         self.loss_final = False
 
         self.input = input
@@ -93,14 +104,14 @@ class Model():
         self.optimizer = optimizer
 
     def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1):
-
-        #create input suitable for feeding into the input node
+        sample_size = self.sample_size
+        # create input suitable for feeding into the input node
         in_tens = np.repeat([X], sample_size, axis=0)
         in_tens_y = np.repeat([y], sample_size, axis=0)
         nbatch = int(len(X)/batchsize)
 
         if not self.loss_final:
-            #create object for storing part of loss dependent on variables:
+            # create object for storing part of loss dependent on variables:
             self.var_loss = self.loss
 
             loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * 5 ** 2) + self.loss / (nbatch * 1.)
@@ -110,15 +121,14 @@ class Model():
             self.sess.run(tf.initialize_all_variables())
             self.loss_final = True
 
-            #remember batchsize in case of change
+            # remember batchsize in case of change
             self.batchsize = batchsize
 
-        #reconfigure loss in case of batch size change
+        # reconfigure loss in case of batch size change
         if self.loss_final and self.batchsize != batchsize:
             loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * 5 ** 2) + self.var_loss / (nbatch * 1.)
             loss = loss / sample_size
             self.loss = loss
-
 
         for epoch in range(nepoch):
 
@@ -143,7 +153,7 @@ class Model():
 
             if epoch % shuffle_freq == 0:
                 shuffle = np.random.permutation(in_tens.shape[1])
-                #not running gc right after shuffle causes memory leak
+                # not running gc right after shuffle causes memory leak
                 gc.collect()
                 in_tens = in_tens[:, shuffle, :]
                 in_tens_y = in_tens_y[:, shuffle, :]
@@ -154,6 +164,8 @@ class Model():
         :param samplesize: size of prediction sample of variables
         :param return_distrib: whether to return a whole set of samples of only the mean value
         '''
+        sample_size = self.sample_size
+
         n = int(samplesize / sample_size) + 1
         X = np.repeat([X], sample_size, axis=0)
         print(X.shape)
