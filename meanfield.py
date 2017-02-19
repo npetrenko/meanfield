@@ -13,11 +13,11 @@ class Dense():
         shape = [self.inp_dim, self.dim]
         self.mean = tf.Variable(np.random.normal(size=shape, scale=0.05), dtype=tf.float32)
         self.sigma = tf.Variable(np.random.normal(size=shape, scale=0.01, loc=0), dtype=tf.float32)
-        self.sigma = tf.log(tf.exp(self.sigma + np.log(prior)) + 1)
+        self.sigma = tf.log(tf.exp(self.sigma + 1) + 0.1)
 
         self.mean_const = tf.Variable(np.random.normal(size=dim, scale=0.05), dtype=tf.float32)
         self.sigma_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
-        self.sigma_const = tf.log(tf.exp(self.sigma_const + np.log(prior)) + 1)
+        self.sigma_const = tf.log(tf.exp(self.sigma_const + 0.1) + 1)
 
         activation_matrix = tf.random_normal(shape=[samp_size] + shape, dtype=tf.float32,
                                              stddev=1) * self.sigma + self.mean
@@ -98,7 +98,7 @@ class Model():
                 in_tens_y = in_tens_y[:, shuffle, :]
 
 
-    def predict(self, X, samplesize=50, return_distrib=False):
+    def predict(self, X, samplesize=250, return_distrib=False):
         n = int(samplesize / sample_size) + 1
         X = np.repeat([X], sample_size, axis=0)
         preds = None
