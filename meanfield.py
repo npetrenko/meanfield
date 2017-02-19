@@ -21,14 +21,15 @@ class Dense():
 
         activation_matrix = tf.random_normal(shape=[samp_size] + shape, dtype=tf.float32,
                                              stddev=1) * self.sigma + self.mean
-        bias = tf.random_normal(shape=[samp_size, dim], dtype=tf.float32, stddev=1) * self.sigma_const + self.mean_const
+        bias = tf.random_normal(shape=[samp_size, 1, dim], dtype=tf.float32, stddev=1) * self.sigma_const + self.mean_const
 
         l = []
         for i in range(samp_size):
             temp = tf.matmul(input_layer.output[i], activation_matrix[i])
             l.append(temp)
         temp = tf.pack(l, axis=0)
-        self.output = tf.transpose(act(tf.transpose(temp, [1, 0, 2]) + bias), [1, 0, 2])
+        #self.output = tf.transpose(act(tf.transpose(temp, [1, 0, 2]) + bias), [1, 0, 2])
+        self.output = act(temp + bias)
         print(self.output)
 
         l1 = tf.reduce_sum(-tf.log(np.sqrt(2 * pi) * self.sigma)) + tf.reduce_sum(
