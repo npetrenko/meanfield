@@ -13,11 +13,11 @@ class Dense():
         shape = [self.inp_dim, self.dim]
         self.mean = tf.Variable(np.random.normal(size=shape, scale=0.05), dtype=tf.float32)
         self.sigma = tf.Variable(np.random.normal(size=shape, scale=0.01, loc=0), dtype=tf.float32)
-        self.sigma = tf.log(tf.exp(self.sigma) + 1)
+        self.sigma = tf.log(tf.exp(self.sigma + prior) + 1)
 
         self.mean_const = tf.Variable(np.random.normal(size=dim, scale=0.05), dtype=tf.float32)
         self.sigma_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
-        self.sigma_const = tf.log(tf.exp(self.sigma_const) + 1)
+        self.sigma_const = tf.log(tf.exp(self.sigma_const + prior) + 1)
 
         activation_matrix = tf.random_normal(shape=[samp_size] + shape, dtype=tf.float32,
                                              stddev=1) * self.sigma + self.mean
@@ -45,6 +45,8 @@ class Input():
         self.loss = 0
 
 class Model():
+    def terminate(self):
+        self.sess.close()
     def __init__(self, input, output, optimizer=tf.train.AdamOptimizer(0.001)):
         self.sess = tf.Session()
         self.loss = output.loss
@@ -60,8 +62,8 @@ class Model():
         self.sess.run(tf.initialize_all_variables())
 
     def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1):
-        in_tens = np.repeat([X], sample_size, axis=0).reshape((sample_size, -1, 1))
-        in_tens_y = np.repeat([y], sample_size, axis=0).reshape((sample_size, -1, 1))
+        in_tens = np.repeat([X], sample_size, axis=0)#.reshape((sample_size, -1, 1))
+        in_tens_y = np.repeat([y], sample_size, axis=0)#.reshape((sample_size, -1, 1))
         nbatch = int(len(X)/batchsize)
 
         if not self.loss_final:
@@ -98,7 +100,7 @@ class Model():
 
     def predict(self, X, samplesize=50, return_distrib=False):
         n = int(samplesize / sample_size) + 1
-        X = np.repeat([X], sample_size, axis=0).reshape((sample_size, -1, 1))
+        X = np.repeat([X], sample_size, axis=0)
         preds = None
         if return_distrib:
             for i in range(n):
