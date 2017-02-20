@@ -109,6 +109,7 @@ class Model(Network):
 
         # parameter which helps to build the final loss
         self.loss_final = False
+        self.saver = tf.train.Saver()
 
         self.input = input
         self.output = output
@@ -180,10 +181,11 @@ class Model(Network):
         :param path: path to weight file
         :return: None
         '''
-        arrs = []
-        for mat in self.weights:
-            arrs.append(self.sess.run(mat))
-        np.save(path, arrs)
+        #arrs = []
+        #for mat in self.weights:
+            #arrs.append(self.sess.run(mat))
+        #np.save(path, arrs)
+        self.saver.save(self.sess, path)
 
     def load(self, path):
         '''
@@ -191,9 +193,10 @@ class Model(Network):
         :param path: path to weights file
         :return:
         '''
-        arrs = np.load(path)
-        for mat, arr in zip(self.weights, arrs):
-            self.sess.run(mat.assign(arr))
+        #arrs = np.load(path)
+        #for mat, arr in zip(self.weights, arrs):
+            #self.sess.run(mat.assign(arr))
+        self.saver.restore(self.sess, path)
 
     def predict(self, X, samplesize=250, return_distrib=False):
         '''
