@@ -196,7 +196,6 @@ class Model(Network):
 
         n = int(samplesize / sample_size) + 1
         X = np.repeat([X], sample_size, axis=0)
-        print(X.shape)
         preds = None
         if return_distrib:
             for i in range(n):
