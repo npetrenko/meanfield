@@ -1,14 +1,21 @@
-import tensorflow as tf
 import numpy as np
 from math import pi
 import gc
+import tensorflow as tf
 
 
 class Network():
+    '''
+    initialize global NN class
+    sample_size: number of samples on monte carlo step
+    '''
     sample_size = 1
 
 
 class Layer(Network):
+    '''
+    empty class to keep everything neat
+    '''
     pass
 
 
@@ -19,7 +26,6 @@ class Dense(Layer):
         :param dim: number of neurons in the layer
         :param input_layer: input layer calss object
         :param act: tensorflow activation function
-        :param samp_size: size of sample on monte carlo step
         :param prior: standard deviation of prior
         '''
 
@@ -70,7 +76,6 @@ class Input(Layer):
     def __init__(self, dim):
         '''
         :param dim: number of sensors in the first layer
-        :param sample_size: size of sample on monte carlo step
         '''
         sample_size = self.sample_size
         self.input = tf.placeholder(shape=tuple([sample_size, None] + [dim]), dtype=tf.float32)
