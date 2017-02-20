@@ -23,6 +23,8 @@ class Dense(Layer):
         :param prior: standard deviation of prior
         '''
 
+        self.weights = input_layer.weights
+
         sample_size = self.sample_size
         self.dim = dim
         self.inp_dim = input_layer.dim
@@ -30,10 +32,12 @@ class Dense(Layer):
         shape = [self.inp_dim, self.dim]
         self.mean = tf.Variable(np.random.normal(size=shape, scale=0.05), dtype=tf.float32)
         self.sigma = tf.Variable(np.random.normal(size=shape, scale=0.01, loc=0), dtype=tf.float32)
+        self.weights += [self.mean, self.sigma]
         self.sigma = tf.log(tf.exp(self.sigma + self.initial_sigma) + 0.1)
 
         self.mean_const = tf.Variable(np.random.normal(size=dim, scale=0.05), dtype=tf.float32)
         self.sigma_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
+        self.weights += [self.mean_const, self.sigma_const]
         self.sigma_const = tf.log(tf.exp(self.sigma_const + self.initial_sigma) + 1)
 
         # sample of activation matrixes and biases
@@ -73,6 +77,7 @@ class Input(Layer):
         self.output = self.input
         self.dim = dim
         self.loss = 0
+        self.weights = []
 
 
 class Model(Network):
@@ -84,6 +89,7 @@ class Model(Network):
         self.sess.close()
 
     def __init__(self, input, output, optimizer=tf.train.AdamOptimizer(0.001)):
+        self.weights = output.weights
         '''
         :param input: input node of the neural network
         :param output: output node of the network
@@ -160,6 +166,26 @@ class Model(Network):
                 in_tens = in_tens[:, shuffle, :]
                 in_tens_y = in_tens_y[:, shuffle, :]
 
+    def save(self, path):
+        '''
+        save neural network weights
+        :param path: path to weight file
+        :return: None
+        '''
+        arrs = []
+        for mat in self.weights:
+            arrs.append(self.sess.run(mat))
+        np.save(path, arrs)
+
+    def load(self, path):
+        '''
+        load weights of a neural network
+        :param path: path to weights file
+        :return:
+        '''
+        arrs = np.load(path)
+        for mat, arr in zip(self.weights, arrs):
+            self.sess.run(mat.assign(arr))
 
     def predict(self, X, samplesize=250, return_distrib=False):
         '''
