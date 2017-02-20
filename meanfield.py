@@ -94,12 +94,12 @@ class Model(Network):
         self.sess.close()
 
     def __init__(self, input, output, optimizer=tf.train.AdamOptimizer(0.001)):
-        self.weights = output.weights
         '''
         :param input: input node of the neural network
         :param output: output node of the network
         :param optimizer: tensorflow optimizer
         '''
+        self.weights = output.weights
         sample_size = self.sample_size
         self.sess = tf.Session()
         self.loss = output.loss
@@ -115,7 +115,7 @@ class Model(Network):
 
         self.optimizer = optimizer
 
-    def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1):
+    def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1, runnning_backup_dir=None):
         sample_size = self.sample_size
         # create input suitable for feeding into the input node
         in_tens = np.repeat([X], sample_size, axis=0)
@@ -148,6 +148,9 @@ class Model(Network):
             if epoch % log_freq == 0:
                 preds = self.predict(X, samplesize=20)
                 train_mse = np.sqrt(np.mean((preds-y) ** 2))
+
+                if runnning_backup_dir is not None:
+                    self.save(runnning_backup_dir+'runnung_tr{}.npy'.format(train_mse))
 
                 if valid_set is not None:
                     preds = self.predict(valid_set[0], samplesize=20)
