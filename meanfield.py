@@ -150,7 +150,7 @@ class Model(Network):
                 train_mse = np.sqrt(np.mean((preds-y) ** 2))
 
                 if running_backup_dir is not None:
-                    self.save(runnning_backup_dir+'runnung_tr{}.npy'.format(train_mse))
+                    self.save(running_backup_dir+'runnung_tr{}.npy'.format(train_mse))
 
                 if valid_set is not None:
                     preds = self.predict(valid_set[0], samplesize=20)
