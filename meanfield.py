@@ -65,7 +65,7 @@ class Dense(Layer):
         l1 = tf.reduce_sum(-tf.log(np.sqrt(2 * pi) * self.sigma)) + tf.reduce_sum(
             -tf.log(np.sqrt(2 * pi) * self.sigma_const))
         # prior loss
-        l2 = (tf.reduce_sum(-activation_matrix ** 2) + tf.reduce_sum(- bias ** 2)) / (2 * prior)
+        l2 = (-tf.reduce_sum((activation_matrix ** 2)) - tf.reduce_sum((bias ** 2))) / (2 * prior**2) #probably i need a square here
 
         # feeding loss to the next layer
         self.loss = l1 - l2
