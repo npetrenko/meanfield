@@ -21,14 +21,14 @@ class Layer(Network):
 
 class Dense(Layer):
     initial_sigma = 0.1
-    def __init__(self, dim, input_layer, act=tf.nn.relu, prior=3):
+    def __init__(self, dim, input_layer, act=tf.nn.relu, prior=3, name=''):
         '''
         :param dim: number of neurons in the layer
         :param input_layer: input layer calss object
         :param act: tensorflow activation function
         :param prior: standard deviation of prior
         '''
-
+        prior = tf.Variable(prior, dtype=tf.float32, trainable=False, name='prior_' + name)
         self.weights = input_layer.weights
 
         sample_size = self.sample_size
@@ -147,14 +147,14 @@ class Model(Network):
         for epoch in range(nepoch):
 
             if epoch % log_freq == 0:
-                preds = self.predict(X, samplesize=20)
+                preds = self.predict(X, prediction_sample_size=20)
                 train_mse = np.sqrt(np.mean((preds-y) ** 2))
 
                 if running_backup_dir is not None:
                     self.save(running_backup_dir+'runnung_tr{}.npy'.format(train_mse))
 
                 if valid_set is not None:
-                    preds = self.predict(valid_set[0], samplesize=20)
+                    preds = self.predict(valid_set[0], prediction_sample_size=20)
                     valid_mse = np.sqrt(np.mean((preds - valid_set[1]) ** 2))
                     print('epoch: {} \n train error: {} \n valid_error: {} \n\n\n'.format(epoch, train_mse, valid_mse))
 
