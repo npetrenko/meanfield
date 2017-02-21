@@ -181,11 +181,11 @@ class Model(Network):
         :param path: path to weight file
         :return: None
         '''
-        #arrs = []
-        #for mat in self.weights:
-            #arrs.append(self.sess.run(mat))
-        #np.save(path, arrs)
-        self.saver.save(self.sess, path)
+        arrs = []
+        for mat in self.weights:
+            arrs.append(self.sess.run(mat))
+        np.save(path, arrs)
+        #self.saver.save(self.sess, path)
 
     def load(self, path):
         '''
@@ -193,19 +193,19 @@ class Model(Network):
         :param path: path to weights file
         :return:
         '''
-        #arrs = np.load(path)
-        #for mat, arr in zip(self.weights, arrs):
-            #self.sess.run(mat.assign(arr))
-        self.saver.restore(self.sess, path)
+        arrs = np.load(path)
+        for mat, arr in zip(self.weights, arrs):
+            self.sess.run(mat.assign(arr))
+        #self.saver.restore(self.sess, path)
 
-    def predict(self, X, samplesize=250, return_distrib=False):
+    def predict(self, X, prediction_sample_size=250, return_distrib=False):
         '''
         :param samplesize: size of prediction sample of variables
         :param return_distrib: whether to return a whole set of samples of only the mean value
         '''
         sample_size = self.sample_size
 
-        n = int(samplesize / sample_size) + 1
+        n = int(prediction_sample_size / sample_size) + 1
         X = np.repeat([X], sample_size, axis=0)
         preds = None
         if return_distrib:
