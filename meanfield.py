@@ -29,6 +29,7 @@ class Dense(Layer):
         :param prior: standard deviation of prior
         '''
         prior = tf.Variable(prior, dtype=tf.float32, trainable=False, name='prior_' + name)
+        
         self.weights = input_layer.weights
 
         sample_size = self.sample_size
@@ -62,19 +63,20 @@ class Dense(Layer):
         print(self.output)
 
         # ...
-        #l1 = tf.reduce_sum(-tf.log(np.sqrt(2 * pi) * self.sigma)) + tf.reduce_sum(
-        #    -tf.log(np.sqrt(2 * pi) * self.sigma_const))
+        l1 = tf.reduce_sum(-tf.log(np.sqrt(2 * pi) * self.sigma)) + tf.reduce_sum(
+            -tf.log(np.sqrt(2 * pi) * self.sigma_const))
         # prior loss
-        #l2 = (-tf.reduce_sum((activation_matrix ** 2)) - tf.reduce_sum((bias ** 2))) / (2 * prior**2) #probably i need a square here
+        l2 = (-tf.reduce_sum((activation_matrix ** 2)) - tf.reduce_sum((bias ** 2))) / (2 * prior**2) #probably i need a square here
 
-        def log_gauss (x, sigma, mu):
-            return -tf.reduce_sum((x-mu)**2)/sigma**2 - tf.log(np.sqrt(2*pi)*sigma)
+        #def log_gauss (x, sigma, mu):
+        #    return -tf.reduce_sum((x-mu)**2)/sigma**2 - tf.log(np.sqrt(2*pi)*sigma)
 
-        qw = log_gauss(activation_matrix, self.sigma, self.mean) + log_gauss(bias, self.sigma_const, self.mean_const)
-        pw = log_gauss(activation_matrix, prior, 0) + log_gauss(bias, prior, 0)
+        #qw = log_gauss(activation_matrix, self.sigma, self.mean) + log_gauss(bias, self.sigma_const, self.mean_const)
+        #pw = log_gauss(activation_matrix, prior, 0) + log_gauss(bias, prior, 0)
+
         # feeding loss to the next layer
-        #self.loss = l1 - l2
-        self.loss = qw - pw
+        self.loss = l1 - l2
+        #self.loss = qw - pw
         self.loss += input_layer.loss
 
 
