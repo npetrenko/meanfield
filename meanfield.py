@@ -62,13 +62,19 @@ class Dense(Layer):
         print(self.output)
 
         # ...
-        l1 = tf.reduce_sum(-tf.log(np.sqrt(2 * pi) * self.sigma)) + tf.reduce_sum(
-            -tf.log(np.sqrt(2 * pi) * self.sigma_const))
+        #l1 = tf.reduce_sum(-tf.log(np.sqrt(2 * pi) * self.sigma)) + tf.reduce_sum(
+        #    -tf.log(np.sqrt(2 * pi) * self.sigma_const))
         # prior loss
-        l2 = (-tf.reduce_sum((activation_matrix ** 2)) - tf.reduce_sum((bias ** 2))) / (2 * prior**2) #probably i need a square here
+        #l2 = (-tf.reduce_sum((activation_matrix ** 2)) - tf.reduce_sum((bias ** 2))) / (2 * prior**2) #probably i need a square here
 
+        def log_gauss (x, sigma, mu):
+            return -tf.reduce_sum((x-mu)**2)/sigma**2 - tf.log(np.sqrt(2*pi)*sigma)
+
+        qw = log_gauss(activation_matrix, self.sigma, self.mean) + log_gauss(bias, self.sigma_const, self.mean_const)
+        pw = log_gauss(activation_matrix, prior, 0) + log_gauss(bias, prior, 0)
         # feeding loss to the next layer
-        self.loss = l1 - l2
+        #self.loss = l1 - l2
+        self.loss = qw - pw
         self.loss += input_layer.loss
 
 
@@ -127,7 +133,7 @@ class Model(Network):
             # create object for storing part of loss dependent on variables:
             self.var_loss = self.loss
 
-            loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * 5 ** 2) + self.loss / (nbatch * 1.)
+            loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * 0.2 ** 2) + self.loss / (nbatch * 1.)
             loss = loss / sample_size
             self.loss = loss
             self.optimizer = self.optimizer.minimize(self.loss)
@@ -139,22 +145,23 @@ class Model(Network):
 
         # reconfigure loss in case of batch size change
         if self.loss_final and self.batchsize != batchsize:
-            loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * 5 ** 2) + self.var_loss / (nbatch * 1.)
+            loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * 0.2 ** 2) + self.var_loss / (nbatch * 1.)
             loss = loss / sample_size
             self.loss = loss
             self.batchsize = batchsize
+            self.optimizer = self.optimizer.minimize(self.loss)
 
         for epoch in range(nepoch):
 
             if epoch % log_freq == 0:
-                preds = self.predict(X, prediction_sample_size=20)
+                preds = self.predict(X, prediction_sample_size=100)
                 train_mse = np.sqrt(np.mean((preds-y) ** 2))
 
                 if running_backup_dir is not None:
                     self.save(running_backup_dir+'runnung_tr{}.npy'.format(train_mse))
 
                 if valid_set is not None:
-                    preds = self.predict(valid_set[0], prediction_sample_size=20)
+                    preds = self.predict(valid_set[0], prediction_sample_size=100)
                     valid_mse = np.sqrt(np.mean((preds - valid_set[1]) ** 2))
                     print('epoch: {} \n train error: {} \n valid_error: {} \n\n\n'.format(epoch, train_mse, valid_mse))
 
