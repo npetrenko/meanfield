@@ -9,8 +9,10 @@ class Network():
     '''
     initialize global NN class
     sample_size: number of samples on monte carlo step
+    target_std_deviation: standard deviation of P(y |X, tetha)
     '''
     sample_size = 1
+    target_std_deviation = 0.2
 
 
 class Layer(Network):
@@ -131,7 +133,7 @@ class Model(Network):
 
         if not self.loss_final:
 
-            loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * 0.2 ** 2) + self.var_loss / (nbatch * 1.)
+            loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * self.target_std_deviation ** 2) + self.var_loss / (nbatch * 1.)
             loss = loss / sample_size
             self.loss = loss
             self.optimizer = self.optimizer.minimize(self.loss)
@@ -143,7 +145,7 @@ class Model(Network):
 
         # reconfigure loss in case of batch size change
         if self.loss_final and self.batchsize != batchsize:
-            loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * 0.2 ** 2) + self.var_loss / (nbatch * 1.)
+            loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * self.target_std_deviation ** 2) + self.var_loss / (nbatch * 1.)
             loss = loss / sample_size
             self.loss = loss
             self.batchsize = batchsize
