@@ -2,6 +2,7 @@ import numpy as np
 from math import pi
 import gc
 import tensorflow as tf
+import time
 
 
 class Network():
@@ -63,20 +64,13 @@ class Dense(Layer):
         print(self.output)
 
         # ...
-        l1 = tf.reduce_sum(-tf.log(np.sqrt(2 * pi) * self.sigma)) + tf.reduce_sum(
-            -tf.log(np.sqrt(2 * pi) * self.sigma_const))
+        l1 = tf.reduce_sum(-tf.log(np.sqrt(2 * pi) * self.sigma)) + tf.reduce_sum( -tf.log(np.sqrt(2 * pi) * self.sigma_const) )
         # prior loss
         l2 = (-tf.reduce_sum((activation_matrix ** 2)) - tf.reduce_sum((bias ** 2))) / (2 * prior**2) #probably i need a square here
 
-        #def log_gauss (x, sigma, mu):
-        #    return -tf.reduce_sum((x-mu)**2)/sigma**2 - tf.log(np.sqrt(2*pi)*sigma)
-
-        #qw = log_gauss(activation_matrix, self.sigma, self.mean) + log_gauss(bias, self.sigma_const, self.mean_const)
-        #pw = log_gauss(activation_matrix, prior, 0) + log_gauss(bias, prior, 0)
-
         # feeding loss to the next layer
         self.loss = l1 - l2
-        #self.loss = qw - pw
+        
         self.loss += input_layer.loss
 
 
@@ -110,14 +104,15 @@ class Model(Network):
         self.weights = output.weights
         sample_size = self.sample_size
         self.sess = tf.Session()
-        self.loss = output.loss
+        
+        #store part of loss dependent on variables:
+        self.var_loss = output.loss
 
-        # create placeholder for ys
+        # create placeholder for target values
         self.y_ph = tf.placeholder(shape=(sample_size, None, 1), dtype=tf.float32)
 
         # parameter which helps to build the final loss
         self.loss_final = False
-        self.saver = tf.train.Saver()
 
         self.input = input
         self.output = output
@@ -125,17 +120,18 @@ class Model(Network):
         self.optimizer = optimizer
 
     def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1, running_backup_dir=None):
+        
         sample_size = self.sample_size
+        
         # create input suitable for feeding into the input node
         in_tens = np.repeat([X], sample_size, axis=0)
         in_tens_y = np.repeat([y], sample_size, axis=0)
+        
         nbatch = int(len(X)/batchsize)
 
         if not self.loss_final:
-            # create object for storing part of loss dependent on variables:
-            self.var_loss = self.loss
 
-            loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * 0.2 ** 2) + self.loss / (nbatch * 1.)
+            loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * 0.2 ** 2) + self.var_loss / (nbatch * 1.)
             loss = loss / sample_size
             self.loss = loss
             self.optimizer = self.optimizer.minimize(self.loss)
@@ -154,21 +150,25 @@ class Model(Network):
             self.optimizer = self.optimizer.minimize(self.loss)
 
         for epoch in range(nepoch):
-
+            
+            #print logs every log_freq epochs:
             if epoch % log_freq == 0:
                 preds = self.predict(X, prediction_sample_size=100)
                 train_mse = np.sqrt(np.mean((preds-y) ** 2))
-
-                if running_backup_dir is not None:
-                    self.save(running_backup_dir+'runnung_tr{}.npy'.format(train_mse))
-
+                
                 if valid_set is not None:
                     preds = self.predict(valid_set[0], prediction_sample_size=100)
                     valid_mse = np.sqrt(np.mean((preds - valid_set[1]) ** 2))
                     print('epoch: {} \n train error: {} \n valid_error: {} \n\n\n'.format(epoch, train_mse, valid_mse))
-
                 else:
                     print('epoch: {} \n train error: {} \n\n\n'.format(epoch, train_mse))
+                
+                #record NN weights if the backup dir is set:
+                if running_backup_dir is not None:
+                        if valid_set is not None:
+                            self.save(running_backup_dir+'runnung_tr{}_test{}.npy'.format(train_mse, valid_mse))
+                        else:
+                            self.save(running_backup_dir+'runnung_tr{}.npy'.format(train_mse))
 
             for i in range(nbatch):
                 self.sess.run(self.optimizer,
@@ -176,13 +176,15 @@ class Model(Network):
                                   self.input.input: in_tens[:, batchsize * i:batchsize * (i + 1), :],
                                   self.y_ph: in_tens_y[:, batchsize * i:batchsize * (i + 1), :]
                               })
-
-            if epoch % shuffle_freq == 0:
-                shuffle = np.random.permutation(in_tens.shape[1])
-                # not running gc right after shuffle causes memory leak
-                gc.collect()
-                in_tens = in_tens[:, shuffle, :]
-                in_tens_y = in_tens_y[:, shuffle, :]
+            
+            #shuffle data every shuffle_freq epochs
+            if shuffle_freq is not None:
+                if epoch % shuffle_freq == 0:
+                    shuffle = np.random.permutation(in_tens.shape[1])
+                    # not running gc right after shuffle causes memory leak
+                    gc.collect()
+                    in_tens = in_tens[:, shuffle, :]
+                    in_tens_y = in_tens_y[:, shuffle, :]
 
     def save(self, path):
         '''
@@ -190,23 +192,33 @@ class Model(Network):
         :param path: path to weight file
         :return: None
         '''
+        print('Saving weights...')
+        
+        t0 = time.time()
         arrs = []
         for mat in self.weights:
             arrs.append(self.sess.run(mat))
         np.save(path, arrs)
-        #self.saver.save(self.sess, path)
-
+        t1 = time.time()
+        
+        print('Done in {} seconds'.format(t1-t0))
+            
     def load(self, path):
         '''
         load weights of a neural network
         :param path: path to weights file
         :return:
         '''
+        
+        print('Loading weights...')
+        
+        t0 = time.time()
         arrs = np.load(path)
         for mat, arr in zip(self.weights, arrs):
             self.sess.run(mat.assign(arr))
-        #self.saver.restore(self.sess, path)
-
+        t1 = time.time()
+        print('Done in {} seconds'.format(t1-t0))
+        
     def predict(self, X, prediction_sample_size=250, return_distrib=False):
         '''
         :param samplesize: size of prediction sample of variables
@@ -215,16 +227,22 @@ class Model(Network):
         sample_size = self.sample_size
 
         n = int(prediction_sample_size / sample_size) + 1
+        
+        #prepare data for feeding into the NN
         X = np.repeat([X], sample_size, axis=0)
+        
         preds = None
+        
+        
         if return_distrib:
             for i in range(n):
                 part_pred = self.sess.run(self.output.output,
                                           feed_dict={self.input.input: X})
-                if not preds is None:
+                if preds is not None:
                     preds = np.append(part_pred, preds, axis=0)
                 else:
                     preds = part_pred
+    
         else:
             for i in range(n):
                 if not preds is None:
