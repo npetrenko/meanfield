@@ -64,7 +64,8 @@ class Dense(Layer):
             l.append(temp)
         temp = tf.pack(l, axis=0)
 
-        self.output = act(temp + bias)
+        self.logits = temp+bias
+        self.output = act(self.logits)
         print(self.output)
 
         # ...
@@ -99,17 +100,18 @@ class Model(Network):
         '''
         self.sess.close()
 
-    def __init__(self, input, output, optimizer=tf.train.AdamOptimizer(0.001)):
+    def __init__(self, input, output, optimizer=tf.train.AdamOptimizer(0.001), loss = 'mse'):
         '''
         :param input: input node of the neural network
         :param output: output node of the network
         :param optimizer: tensorflow optimizer
         '''
+
         self.weights = output.weights
         sample_size = self.sample_size
         self.sess = tf.Session()
         
-        #store part of loss dependent on variables:
+        # store part of loss dependent on variables:
         self.var_loss = output.loss
 
         # create placeholder for target values
@@ -123,6 +125,13 @@ class Model(Network):
 
         self.optimizer = optimizer
 
+        if loss == 'mse':
+            self.match_loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * self.target_std_deviation ** 2)
+        elif loss == 'crossentropy':
+            self.match_loss = tf.nn.softmax_cross_entropy_with_logits(output.logits, self.y_ph)
+        else:
+            Exception('No correct loss specified. Use either "mse" of "crossentropy"')
+
     def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1, running_backup_dir=None):
         
         sample_size = self.sample_size
@@ -135,7 +144,7 @@ class Model(Network):
 
         if not self.loss_final:
 
-            loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * self.target_std_deviation ** 2) + self.var_loss / (nbatch * 1.)
+            loss = self.match_loss + self.var_loss / (nbatch * 1.)
             loss = loss / sample_size
             self.loss = loss
             self.optimizer = self.optimizer.minimize(self.loss)
@@ -147,7 +156,7 @@ class Model(Network):
 
         # reconfigure loss in case of batch size change
         if self.loss_final and self.batchsize != batchsize:
-            loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * self.target_std_deviation ** 2) + self.var_loss / (nbatch * 1.)
+            loss = self.match_loss + self.var_loss / (nbatch * 1.)
             loss = loss / sample_size
             self.loss = loss
             self.batchsize = batchsize
@@ -155,7 +164,7 @@ class Model(Network):
 
         for epoch in range(nepoch):
             
-            #print logs every log_freq epochs:
+            # print logs every log_freq epochs:
             if epoch % log_freq == 0:
                 preds = self.predict(X, prediction_sample_size=100)
                 train_mse = np.sqrt(np.mean((preds-y) ** 2))
@@ -167,7 +176,7 @@ class Model(Network):
                 else:
                     print('epoch: {} \n train error: {} \n\n\n'.format(epoch, train_mse))
                 
-                #record NN weights if the backup dir is set:
+                # record NN weights if the backup dir is set:
                 if running_backup_dir is not None:
                         if valid_set is not None:
                             self.save(running_backup_dir+'runnung_tr{}_test{}.npy'.format(train_mse, valid_mse))
@@ -181,7 +190,7 @@ class Model(Network):
                                   self.y_ph: in_tens_y[:, batchsize * i:batchsize * (i + 1), :]
                               })
             
-            #shuffle data every shuffle_freq epochs
+            # shuffle data every shuffle_freq epochs
             if shuffle_freq is not None:
                 if epoch % shuffle_freq == 0:
                     shuffle = np.random.permutation(in_tens.shape[1])
@@ -225,14 +234,14 @@ class Model(Network):
         
     def predict(self, X, prediction_sample_size=250, return_distrib=False):
         '''
-        :param samplesize: size of prediction sample of variables
+        :param prediction_sample_size: size of prediction sample of variables
         :param return_distrib: whether to return a whole set of samples of only the mean value
         '''
         sample_size = self.sample_size
 
         n = int(prediction_sample_size / sample_size) + 1
         
-        #prepare data for feeding into the NN
+        # prepare data for feeding into the NN
         X = np.repeat([X], sample_size, axis=0)
         
         preds = None
