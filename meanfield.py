@@ -115,7 +115,7 @@ class Model(Network):
         self.var_loss = output.loss
 
         # create placeholder for target values
-        self.y_ph = tf.placeholder(shape=(sample_size, None, 1), dtype=tf.float32)
+        self.y_ph = tf.placeholder(shape=(sample_size, None, output.dim), dtype=tf.float32)
 
         # parameter which helps to build the final loss
         self.loss_final = False
@@ -125,12 +125,20 @@ class Model(Network):
 
         self.optimizer = optimizer
 
+
+
         if loss == 'mse':
+            def loss_func(preds, y):
+                return np.sqrt(np.mean((preds-y) ** 2))
             self.match_loss = tf.reduce_sum(((self.output.output - self.y_ph) ** 2)) / (2 * self.target_std_deviation ** 2)
         elif loss == 'crossentropy':
+            def loss_func(preds, y):
+                return np.mean(np.argmax(preds, axis=1) - np.argmax(y, axis=1) != 0)
             self.match_loss = tf.nn.softmax_cross_entropy_with_logits(output.logits, self.y_ph)
         else:
             Exception('No correct loss specified. Use either "mse" of "crossentropy"')
+
+        self.loss_func = loss_func
 
     def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1, running_backup_dir=None):
         
@@ -167,11 +175,11 @@ class Model(Network):
             # print logs every log_freq epochs:
             if epoch % log_freq == 0:
                 preds = self.predict(X, prediction_sample_size=100)
-                train_mse = np.sqrt(np.mean((preds-y) ** 2))
+                train_mse = self.loss_func(preds,y)
                 
                 if valid_set is not None:
                     preds = self.predict(valid_set[0], prediction_sample_size=100)
-                    valid_mse = np.sqrt(np.mean((preds - valid_set[1]) ** 2))
+                    valid_mse = self.loss_func(preds,y)
                     print('epoch: {} \n train error: {} \n valid_error: {} \n\n\n'.format(epoch, train_mse, valid_mse))
                 else:
                     print('epoch: {} \n train error: {} \n\n\n'.format(epoch, train_mse))
