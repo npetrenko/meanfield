@@ -173,6 +173,9 @@ class Model(Network):
             self.loss = loss
             self.batchsize = batchsize
             self.optimizer = self.optimizer.minimize(self.loss)
+            #
+            #
+            #do we need a var init here?
 
         for epoch in range(nepoch):
             
