@@ -44,13 +44,15 @@ class Dense(Layer):
         self.sigma = tf.Variable(np.random.normal(size=shape, scale=0.01, loc=0), dtype=tf.float32)
         self.weights += [self.mean, self.sigma]
         
-        self.sigma = tf.log(tf.exp(self.sigma + self.initial_sigma) + 1)
+        #self.sigma = tf.log(tf.exp(self.sigma + self.initial_sigma) + 1)
+        self.sigma = tf.exp(self.sigma + self.initial_sigma)
 
         self.mean_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
         self.sigma_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
         self.weights += [self.mean_const, self.sigma_const]
         
-        self.sigma_const = tf.log(tf.exp(self.sigma_const + self.initial_sigma) + 1)
+        #self.sigma_const = tf.log(tf.exp(self.sigma_const + self.initial_sigma) + 1)
+        self.sigma_const = tf.exp(self.sigma_const + self.initial_sigma)
 
         # sample of activation matrixes and biases
         activation_matrix = tf.random_normal(shape=[sample_size] + shape, dtype=tf.float32,
