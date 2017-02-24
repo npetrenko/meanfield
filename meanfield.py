@@ -180,7 +180,7 @@ class Model(Network):
             if epoch % log_freq == 0:
                 preds = self.predict(X, prediction_sample_size=100)
                 train_mse = self.loss_func(preds, y)
-                obj = self.sess.run(tf.reduce_mean(self.objective, reduction_indices=0), feed_dict={self.input.input: in_tens,self.y_ph: in_tens_y})
+                obj = self.sess.run(tf.reduce_mean(self.objective), feed_dict={self.input.input: in_tens,self.y_ph: in_tens_y})
                 
                 if valid_set is not None:
                     preds = self.predict(valid_set[0], prediction_sample_size=100)
