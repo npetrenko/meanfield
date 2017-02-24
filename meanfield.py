@@ -60,7 +60,7 @@ class Dense(Layer):
         bias = tf.random_normal(shape=[sample_size, 1, dim], dtype=tf.float32, stddev=1) * self.sigma_const + self.mean_const
 
         # calculate matrix multiplication for each sample and add bias
-        self.logits = tf.tensordot(input_layer.output, activation_matrix, axes=[[2], [1]]) + bias
+        self.logits = tf.tensordot(input_layer.output, activation_matrix, axes=[[2], [0]]) + bias
         self.output = act(self.logits)
         print(self.output)
 
