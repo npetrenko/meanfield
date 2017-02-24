@@ -64,7 +64,7 @@ class Dense(Layer):
         for i in range(sample_size):
             temp = tf.matmul(input_layer.output[i], activation_matrix[i])
             l.append(temp)
-        temp = tf.pack(l, axis=0)
+        temp = tf.stack(l, axis=0)
 
         self.logits = temp+bias
         self.output = act(self.logits)
