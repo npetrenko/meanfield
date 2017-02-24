@@ -142,6 +142,8 @@ class Model(Network):
 
         self.loss_func = loss_func
 
+        self.objective = self.match_loss + self.var_loss
+
     def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1, running_backup_dir=None):
         
         sample_size = self.sample_size
@@ -177,14 +179,15 @@ class Model(Network):
             # print logs every log_freq epochs:
             if epoch % log_freq == 0:
                 preds = self.predict(X, prediction_sample_size=100)
-                train_mse = self.loss_func(preds,y)
+                train_mse = self.loss_func(preds, y)
+                obj = self.sess.run(tf.reduce_mean(self.objective, reduction_indices=0), feed_dict={self.input.input: in_tens,self.y_ph: in_tens_y})
                 
                 if valid_set is not None:
                     preds = self.predict(valid_set[0], prediction_sample_size=100)
                     valid_mse = self.loss_func(preds,y)
-                    print('epoch: {} \n train error: {} \n valid_error: {} \n\n\n'.format(epoch, train_mse, valid_mse))
+                    print('epoch: {} \n train error: {} \n valid_error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, valid_mse, obj))
                 else:
-                    print('epoch: {} \n train error: {} \n\n\n'.format(epoch, train_mse))
+                    print('epoch: {} \n train error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, obj))
                 
                 # record NN weights if the backup dir is set:
                 if running_backup_dir is not None:
