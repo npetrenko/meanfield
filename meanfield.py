@@ -239,7 +239,7 @@ class Model(Network):
         print('Loading weights...')
         
         t0 = time.time()
-        arrs = np.load(path, encoding='utf-8')
+        arrs = np.load(path, encoding='bytes')
         for mat, arr in zip(self.weights, arrs):
             self.sess.run(mat.assign(arr))
         t1 = time.time()
