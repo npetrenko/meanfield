@@ -59,14 +59,8 @@ class Dense(Layer):
                                              stddev=1) * self.sigma + self.mean
         bias = tf.random_normal(shape=[sample_size, 1, dim], dtype=tf.float32, stddev=1) * self.sigma_const + self.mean_const
 
-        # calculate matrix multiplication for each sample
-        l = []
-        for i in range(sample_size):
-            temp = tf.matmul(input_layer.output[i], activation_matrix[i])
-            l.append(temp)
-        temp = tf.stack(l, axis=0)
-
-        self.logits = temp+bias
+        # calculate matrix multiplication for each sample and add bias
+        self.logits = tf.tensordot(input_layer.output, activation_matrix, axes=[[2], [1]]) + bias
         self.output = act(self.logits)
         print(self.output)
 
