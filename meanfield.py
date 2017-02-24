@@ -160,7 +160,7 @@ class Model(Network):
             loss = loss / sample_size
             self.loss = loss
             self.optimizer = self.optimizer.minimize(self.loss)
-            self.sess.run(tf.initialize_all_variables())
+            self.sess.run(tf.global_variables_initializer())
             self.loss_final = True
 
             # remember batchsize in case of change
