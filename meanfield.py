@@ -183,7 +183,7 @@ class Model(Network):
             
             # print logs every log_freq epochs:
             if epoch % log_freq == 0:
-                preds = self.predict(X, prediction_sample_size=100)
+                preds = self.predict(X, prediction_sample_size=100, train_mode=True)
                 train_mse = self.loss_func(preds, y)
                 obj = self.sess.run(tf.reduce_mean(self.objective), feed_dict={self.input.input: in_tens,self.y_ph: in_tens_y})
                 
