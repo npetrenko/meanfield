@@ -3,7 +3,7 @@ from math import pi
 import gc
 import tensorflow as tf
 import time
-import progressbar
+from tqdm import tqdm
 
 
 class Network():
@@ -256,15 +256,14 @@ class Model(Network):
         :param return_distrib: whether to return a whole set of samples of only the mean value
         '''
         if not train_mode:
-            bar = progressbar.ProgressBar(maxval=1.0).start()
+            bar = tqdm(total=100)
         # prepare data for feeding into the NN
         nbatch = int(len(X)/batchsize) + 1
 
         temp = []
-        t=0.0
         for i in range(nbatch):
             if not train_mode:
-                bar.update(t)
+                bar.update(100./nbatch)
             if (i+1)*batchsize > len(X)-1:
                 batch = np.repeat([X[i*batchsize:]], prediction_sample_size, axis=0)
             else:
@@ -274,9 +273,8 @@ class Model(Network):
             else:
                 preds = self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0), feed_dict={self.input.input : batch}).reshape((-1,self.output.dim))
             temp.append(preds)
-            t += 1.0/nbatch
         if not train_mode:
-            bar.finish()
+            bar.close()
         if return_distrib:
             return np.concatenate(temp, axis=1)
         else:
