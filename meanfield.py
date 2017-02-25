@@ -260,6 +260,7 @@ class Model(Network):
         '''
         if not train_mode:
             bar = tqdm(total=100)
+        # exception handling required for tqdm to work correctly
         try:
             # prepare data for feeding into the NN
             nbatch = int(len(X)/batchsize) + 1
@@ -277,6 +278,8 @@ class Model(Network):
                 else:
                     preds = self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0), feed_dict={self.input.input : batch}).reshape((-1,self.output.dim))
                 temp.append(preds)
+                if (i + 1) * batchsize > len(X) - 1:
+                    break
             if not train_mode:
                 bar.close()
             if return_distrib:
