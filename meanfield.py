@@ -267,8 +267,11 @@ class Model(Network):
             if return_distrib:
                 preds = self.sess.run(self.output.output, feed_dict={self.input.input: batch})
             else:
-                preds = self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0), feed_dict={self.input.input : batch})
+                preds = self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0), feed_dict={self.input.input : batch}).reshape((-1,self.output.dim))
             temp.append(preds)
-        return np.append(temp,axis=1)
+        if return_distrib:
+            return np.concatenate(temp, axis=1)
+        else:
+            return np.concatenate(temp, axis=0)
 
 
