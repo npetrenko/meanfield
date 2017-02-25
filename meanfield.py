@@ -35,7 +35,7 @@ class Dense(Layer):
         
         self.weights = input_layer.weights
 
-        sample_size = self.sample_size
+        sample_size = tf.shape(input_layer.output)[0]
         self.dim = dim
         self.inp_dim = input_layer.dim
 
