@@ -63,11 +63,8 @@ class Dense(Layer):
 
         temp = tf.tensordot(input_layer.output, activation_matrix, axes=[[2], [1]])
 
-        def fn(a, b):
-            return a + tf.constant([1, 1], dtype=tf.int32)
-
-        op = tf.scan(fn, temp, initializer=tf.constant([-1, -1], dtype=tf.int32))
-        matrixes = tf.gather_nd(temp, indices=op)
+        ind = tf.stack([tf.range(tf.shape(temp)[0])]*2, axis=1)
+        matrixes = tf.gather_nd(temp, indices=ind)
 
         # index = np.array([[i,i] for i in range(sample_size)], dtype='int')
         #self.logits = tf.gather_nd(tf.tensordot(input_layer.output, activation_matrix, axes=[[2], [1]]), indices=index) + bias
@@ -91,8 +88,7 @@ class Input(Layer):
         '''
         :param dim: number of sensors in the first layer
         '''
-        sample_size = self.sample_size
-        self.input = tf.placeholder(shape=tuple([sample_size, None] + [dim]), dtype=tf.float32)
+        self.input = tf.placeholder(shape=(None, None,dim), dtype=tf.float32)
         self.output = self.input
         self.dim = dim
         self.loss = 0
@@ -122,7 +118,7 @@ class Model(Network):
         self.var_loss = output.loss
 
         # create placeholder for target values
-        self.y_ph = tf.placeholder(shape=(sample_size, None, output.dim), dtype=tf.float32)
+        self.y_ph = tf.placeholder(shape=(None, None, output.dim), dtype=tf.float32)
 
         # parameter which helps to build the final loss
         self.loss_final = False
