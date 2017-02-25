@@ -254,34 +254,16 @@ class Model(Network):
         :param prediction_sample_size: size of prediction sample of variables
         :param return_distrib: whether to return a whole set of samples of only the mean value
         '''
-        sample_size = self.sample_size
-
-        n = int(prediction_sample_size / sample_size) + 1
         
         # prepare data for feeding into the NN
-        X = np.repeat([X], sample_size, axis=0)
-        
-        preds = None
-        
-        
+        X = np.repeat([X], prediction_sample_size, axis=0)
+
         if return_distrib:
-            for i in range(n):
-                part_pred = self.sess.run(self.output.output,
+            preds = self.sess.run(self.output.output,
                                           feed_dict={self.input.input: X})
-                if preds is not None:
-                    preds = np.append(part_pred, preds, axis=0)
-                else:
-                    preds = part_pred
-    
         else:
-            for i in range(n):
-                if not preds is None:
-                    preds += self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0),
-                                           feed_dict={self.input.input : X})
-                else:
-                    preds = self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0),
+            preds = self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0),
                                           feed_dict={self.input.input : X})
-            preds = preds/n
         return preds
 
 
