@@ -260,27 +260,33 @@ class Model(Network):
         '''
         if not train_mode:
             bar = tqdm(total=100)
-        # prepare data for feeding into the NN
-        nbatch = int(len(X)/batchsize) + 1
+        try:
+            # prepare data for feeding into the NN
+            nbatch = int(len(X)/batchsize) + 1
 
-        temp = []
-        for i in range(nbatch):
+            temp = []
+            for i in range(nbatch):
+                if not train_mode:
+                    bar.update(100./nbatch)
+                if (i+1)*batchsize > len(X)-1:
+                    batch = np.repeat([X[i*batchsize:]], prediction_sample_size, axis=0)
+                else:
+                    batch = np.repeat([X[i * batchsize : (i + 1) * batchsize]], prediction_sample_size, axis=0)
+                if return_distrib:
+                    preds = self.sess.run(self.output.output, feed_dict={self.input.input: batch})
+                else:
+                    preds = self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0), feed_dict={self.input.input : batch}).reshape((-1,self.output.dim))
+                temp.append(preds)
             if not train_mode:
-                bar.update(100./nbatch)
-            if (i+1)*batchsize > len(X)-1:
-                batch = np.repeat([X[i*batchsize:]], prediction_sample_size, axis=0)
-            else:
-                batch = np.repeat([X[i * batchsize : (i + 1) * batchsize]], prediction_sample_size, axis=0)
+                bar.close()
             if return_distrib:
-                preds = self.sess.run(self.output.output, feed_dict={self.input.input: batch})
+                return np.concatenate(temp, axis=1)
             else:
-                preds = self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0), feed_dict={self.input.input : batch}).reshape((-1,self.output.dim))
-            temp.append(preds)
-        if not train_mode:
-            bar.close()
-        if return_distrib:
-            return np.concatenate(temp, axis=1)
-        else:
-            return np.concatenate(temp, axis=0)
+                return np.concatenate(temp, axis=0)
+        except Exception as exc:
+            if not train_mode:
+                bar.close()
+            raise exc
+
 
 
