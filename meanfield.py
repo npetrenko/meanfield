@@ -188,7 +188,7 @@ class Model(Network):
                 obj = self.sess.run(tf.reduce_mean(self.objective), feed_dict={self.input.input: in_tens,self.y_ph: in_tens_y})
                 
                 if valid_set is not None:
-                    preds = self.predict(valid_set[0], prediction_sample_size=100)
+                    preds = self.predict(valid_set[0], prediction_sample_size=100, train_mode=True)
                     valid_mse = self.loss_func(preds,y)
                     print('epoch: {} \n train error: {} \n valid_error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, valid_mse, obj))
                 else:
@@ -250,19 +250,21 @@ class Model(Network):
         t1 = time.time()
         print('Done in {} seconds'.format(t1-t0))
         
-    def predict(self, X, prediction_sample_size=250, batchsize = 360, return_distrib=False):
+    def predict(self, X, prediction_sample_size=250, batchsize = 360, return_distrib=False, train_mode=False):
         '''
         :param prediction_sample_size: size of prediction sample of variables
         :param return_distrib: whether to return a whole set of samples of only the mean value
         '''
-        bar = progressbar.ProgressBar(maxval=1.0).start()
+        if not train_mode:
+            bar = progressbar.ProgressBar(maxval=1.0).start()
         # prepare data for feeding into the NN
         nbatch = int(len(X)/batchsize) + 1
 
         temp = []
         t=0.0
         for i in range(nbatch):
-            bar.update(t)
+            if not train_mode:
+                bar.update(t)
             if (i+1)*batchsize > len(X)-1:
                 batch = np.repeat([X[i*batchsize:]], prediction_sample_size, axis=0)
             else:
@@ -273,7 +275,8 @@ class Model(Network):
                 preds = self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0), feed_dict={self.input.input : batch}).reshape((-1,self.output.dim))
             temp.append(preds)
             t += 1.0/nbatch
-        bar.finish()
+        if not train_mode:
+            bar.finish()
         if return_distrib:
             return np.concatenate(temp, axis=1)
         else:
