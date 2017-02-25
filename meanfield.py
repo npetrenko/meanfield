@@ -61,7 +61,7 @@ class Dense(Layer):
 
         # calculate matrix multiplication for each sample and add bias
 
-        temp = tf.tensordot(input_layer.output, activation_matrix, axes=[[2], [1]])
+        temp = tf.transpose(tf.tensordot(input_layer.output, activation_matrix, axes=[[2], [1]]), perm=[0,2,1,3])
 
         ind = tf.stack([tf.range(tf.shape(temp)[0])]*2, axis=1)
         matrixes = tf.gather_nd(temp, indices=ind)
