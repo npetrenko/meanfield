@@ -139,7 +139,9 @@ class Model(Network):
             def loss_func(preds, y):
                 return np.mean(np.argmax(preds, axis=1) - np.argmax(y, axis=1) != 0)
             self.match_loss = tf.nn.softmax_cross_entropy_with_logits(logits=output.logits,
-                                                                      labels=self.y_ph)*tf.cast(tf.shape(output.logits)[1], dtype=tf.float32)
+                                                                      labels=self.y_ph)*tf.cast(tf.shape(output.logits)[1],
+                                                                                                dtype=tf.float32)*tf.cast(tf.shape(output.logits)[0],
+                                                                                                                          dtype=tf.float32)
         else:
             Exception('No correct loss specified. Use either "mse" of "crossentropy"')
 
