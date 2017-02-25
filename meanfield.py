@@ -249,21 +249,26 @@ class Model(Network):
         t1 = time.time()
         print('Done in {} seconds'.format(t1-t0))
         
-    def predict(self, X, prediction_sample_size=250, return_distrib=False):
+    def predict(self, X, prediction_sample_size=250, batchsize = 360, return_distrib=False):
         '''
         :param prediction_sample_size: size of prediction sample of variables
         :param return_distrib: whether to return a whole set of samples of only the mean value
         '''
         
         # prepare data for feeding into the NN
-        X = np.repeat([X], prediction_sample_size, axis=0)
+        nbatch = int(len(X)/batchsize) + 1
 
-        if return_distrib:
-            preds = self.sess.run(self.output.output,
-                                          feed_dict={self.input.input: X})
-        else:
-            preds = self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0),
-                                          feed_dict={self.input.input : X})
-        return preds
+        temp = []
+        for i in range(nbatch):
+            if (i+1)*batchsize > len(X)-1:
+                batch = np.repeat([X[i*batchsize:]], prediction_sample_size, axis=0)
+            else:
+                batch = np.repeat([X[i * batchsize:(i + 1) * batchsize]], prediction_sample_size, axis=0)
+            if return_distrib:
+                preds = self.sess.run(self.output.output, feed_dict={self.input.input: batch})
+            else:
+                preds = self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0), feed_dict={self.input.input : batch})
+            temp.append(preds)
+        return np.append(temp,axis=1)
 
 
