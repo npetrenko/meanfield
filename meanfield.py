@@ -253,7 +253,7 @@ class Model(Network):
         t1 = time.time()
         print('Done in {} seconds'.format(t1-t0))
         
-    def predict(self, X, prediction_sample_size=250, batchsize = 360, return_distrib=False, train_mode=False):
+    def predict(self, X, prediction_sample_size=250, batchsize = 360, return_distrib=False, train_mode=False, return_std=False):
         '''
         :param prediction_sample_size: size of prediction sample of variables
         :param return_distrib: whether to return a whole set of samples of only the mean value
@@ -262,10 +262,13 @@ class Model(Network):
             bar = tqdm(total=100)
         # exception handling required for tqdm to work correctly
         try:
+            pred_op = tf.reduce_mean(self.output.output, reduction_indices=0)
+            std_op =  tf.reduce_sum(tf.sqrt(tf.reduce_mean((self.output.output - pred_op)**2, reduction_indices=0)), reduction_indices=-1)
             # prepare data for feeding into the NN
             nbatch = int(len(X)/batchsize) + 1
 
             temp = []
+            stds = []
             for i in range(nbatch):
                 if not train_mode:
                     bar.update(100./nbatch)
@@ -276,7 +279,11 @@ class Model(Network):
                 if return_distrib:
                     preds = self.sess.run(self.output.output, feed_dict={self.input.input: batch})
                 else:
-                    preds = self.sess.run(tf.reduce_mean(self.output.output, reduction_indices=0), feed_dict={self.input.input : batch}).reshape((-1,self.output.dim))
+                    if return_std:
+                        preds, std = self.sess.run([pred_op, std_op], feed_dict = {self.input.input : batch})
+                        stds.append(std)
+                    else:
+                        preds = self.sess.run(pred_op, feed_dict={self.input.input: batch})
                 temp.append(preds)
                 if (i + 1) * batchsize > len(X) - 1:
                     break
@@ -285,7 +292,10 @@ class Model(Network):
             if return_distrib:
                 return np.concatenate(temp, axis=1)
             else:
-                return np.concatenate(temp, axis=0)
+                if return_std:
+                    return np.concatenate(temp, axis=0), np.concatenate(stds, axis=0)
+                else:
+                    return np.concatenate(temp, axis=0)
         except Exception as exc:
             if not train_mode:
                 bar.close()
