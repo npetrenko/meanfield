@@ -299,6 +299,7 @@ class Model(Network):
         except Exception as exc:
             if not train_mode:
                 bar.close()
+                time.sleep(1)
             raise exc
 
 
