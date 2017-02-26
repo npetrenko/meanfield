@@ -287,19 +287,16 @@ class Model(Network):
                 temp.append(preds)
                 if (i + 1) * batchsize > len(X) - 1:
                     break
+        finally:
             if not train_mode:
                 bar.close()
-            if return_distrib:
-                return np.concatenate(temp, axis=1)
+        if return_distrib:
+            return np.concatenate(temp, axis=1)
+        else:
+            if return_std:
+                return np.concatenate(temp, axis=0), np.concatenate(stds, axis=0)
             else:
-                if return_std:
-                    return np.concatenate(temp, axis=0), np.concatenate(stds, axis=0)
-                else:
-                    return np.concatenate(temp, axis=0)
-        except (KeyboardInterrupt, Exception) as exc:
-            if not train_mode:
-                bar.close()
-            raise exc
+                return np.concatenate(temp, axis=0)
 
 
 
