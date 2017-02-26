@@ -296,10 +296,9 @@ class Model(Network):
                     return np.concatenate(temp, axis=0), np.concatenate(stds, axis=0)
                 else:
                     return np.concatenate(temp, axis=0)
-        except Exception as exc:
+        except (KeyboardInterrupt, Exception) as exc:
             if not train_mode:
                 bar.close()
-                time.sleep(1)
             raise exc
 
 
