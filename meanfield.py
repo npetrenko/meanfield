@@ -259,7 +259,7 @@ class Model(Network):
         :param return_distrib: whether to return a whole set of samples of only the mean value
         '''
         if not train_mode:
-            bar = tqdm() #total=100
+            bar = tqdm(total=100)
         # exception handling required for tqdm to work correctly
         try:
             pred_op = tf.reduce_mean(self.output.output, reduction_indices=0)
