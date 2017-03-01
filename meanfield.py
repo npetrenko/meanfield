@@ -109,8 +109,8 @@ class Input(Layer):
         '''
         #self.input = tf.placeholder(shape=(None, None,dim), dtype=tf.float32)
         self.input = tt.matrix(name='input', dtype=dtype) #shape=(None, None, dim)
-        self.sample_size = th.shared(self.sample_size)
-        self.output = tt.tile(self.input, (tt.cast(self.sample_size, dtype='int'),1,1))
+        self.sample_size = th.shared([0]*self.sample_size)
+        self.output = tt.tile(self.input, (self.sample_size.shape[0],1,1))
         self.dim = dim
         self.loss = 0
         self.weights = []
@@ -287,7 +287,7 @@ class Model(Network):
             bar = tqdm(total=100)
         # exception handling required for tqdm to work correctly
         try:
-            self.input.sample_size.set_value(prediction_sample_size)
+            self.input.sample_size.set_value([0]*prediction_sample_size)
             pred_op = tt.mean(self.output.output, axis=0)
             std_op =  tt.sum(tt.sqrt(tt.mean((self.output.output - pred_op)**2, axis=0)), axis=-1)
 
@@ -322,7 +322,7 @@ class Model(Network):
         finally:
             if not train_mode:
                 bar.close()
-            self.input.sample_size.set_value(self.sample_size)
+            self.input.sample_size.set_value([0]*self.sample_size)
         if return_distrib:
             return np.concatenate(temp, axis=1)
         else:
