@@ -208,7 +208,7 @@ class Model(Network):
             
             # print logs every log_freq epochs:
             if epoch % log_freq == 0:
-                preds = self.predict(X, prediction_sample_size=100, train_mode=True)
+                preds = self.predict(X.astype(dtype), prediction_sample_size=100, train_mode=True)
                 train_mse = self.loss_func(preds, y)
                 #obj = self.sess.run(tf.reduce_mean(self.objective), feed_dict={self.input.input: in_tens,self.y_ph: in_tens_y})
                 obj = obj_fun(in_tens, in_tens_y)
@@ -269,7 +269,7 @@ class Model(Network):
         t0 = time.time()
         arrs = np.load(path, encoding='bytes')
         for mat, arr in zip(self.weights, arrs):
-            self.sess.run(mat.set_value(arr))
+            mat.set_value(arr)
         t1 = time.time()
         print('Done in {} seconds'.format(t1-t0))
         
