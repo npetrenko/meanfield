@@ -108,8 +108,9 @@ class Input(Layer):
         :param dim: number of sensors in the first layer
         '''
         #self.input = tf.placeholder(shape=(None, None,dim), dtype=tf.float32)
-        self.input = tt.tensor3(name='input', dtype=dtype) #shape=(None, None, dim)
-        self.output = self.input
+        self.input = tt.matrix(name='input', dtype=dtype) #shape=(None, None, dim)
+        self.sample_size = th.shared(self.sample_size)
+        self.output = tt.tile(self.input, (self.sample_size,1,1))
         self.dim = dim
         self.loss = 0
         self.weights = []
@@ -138,7 +139,9 @@ class Model(Network):
 
         # create placeholder for target values
         #self.y_ph = tf.placeholder(shape=(None, None, output.dim), dtype=tf.float32)
-        self.y_ph = tt.tensor3(name='y_ph', dtype=dtype) #shape=(None, None, output.dim)
+        self.y = tt.matrix('y',dtype)
+        self.y_ph = tt.tile(self.y, (self.sample_size,1,1))
+        #tt.tensor3(name='y_ph', dtype=dtype) #shape=(None, None, output.dim)
 
         # parameter which helps to build the final loss
         self.loss_final = False
@@ -173,8 +176,10 @@ class Model(Network):
         sample_size = self.sample_size
         
         # create input suitable for feeding into the input node
-        in_tens = np.repeat([X], sample_size, axis=0).astype(dtype)
-        in_tens_y = np.repeat([y], sample_size, axis=0).astype(dtype)
+        #in_tens = np.repeat([X], sample_size, axis=0).astype(dtype)
+        #in_tens_y = np.repeat([y], sample_size, axis=0).astype(dtype)
+        in_tens = X.astype(dtype)
+        in_tens_y = y.astype(dtype)
         
         nbatch = int(len(X)/batchsize)
 
@@ -200,15 +205,15 @@ class Model(Network):
             #
             #do we need a var init here?
 
-        obj_fun = th.function([self.input.input, self.y_ph], self.objective.mean())
+        obj_fun = th.function([self.input.input, self.y], self.objective.mean())
 
-        train = th.function([self.input.input, self.y_ph], updates=self.updates(self.loss, self.weights))
+        train = th.function([self.input.input, self.y], updates=self.updates(self.loss, self.weights))
 
         for epoch in range(nepoch):
             
             # print logs every log_freq epochs:
             if epoch % log_freq == 0:
-                preds = self.predict(X.astype(dtype), prediction_sample_size=100, train_mode=True)
+                preds = self.predict(in_tens, prediction_sample_size=100, train_mode=True)
                 train_mse = self.loss_func(preds, y)
                 #obj = self.sess.run(tf.reduce_mean(self.objective), feed_dict={self.input.input: in_tens,self.y_ph: in_tens_y})
                 obj = obj_fun(in_tens, in_tens_y)
@@ -228,8 +233,8 @@ class Model(Network):
                             self.save(running_backup_dir+'runnung_tr{}.npy'.format(train_mse))
 
             for i in range(nbatch):
-                train(in_tens[:, batchsize * i:batchsize * (i + 1), :],
-                      in_tens_y[:, batchsize * i:batchsize * (i + 1), :])
+                train(in_tens[batchsize * i:batchsize * (i + 1), :],
+                      in_tens_y[batchsize * i:batchsize * (i + 1), :])
             
             # shuffle data every shuffle_freq epochs
             if shuffle_freq is not None:
@@ -237,8 +242,8 @@ class Model(Network):
                     shuffle = np.random.permutation(in_tens.shape[1])
                     # not running gc right after shuffle causes memory leak
                     gc.collect()
-                    in_tens = in_tens[:, shuffle, :]
-                    in_tens_y = in_tens_y[:, shuffle, :]
+                    in_tens = in_tens[shuffle, :]
+                    in_tens_y = in_tens_y[shuffle, :]
 
     def save(self, path):
         '''
@@ -297,9 +302,9 @@ class Model(Network):
                 if not train_mode:
                     bar.update(100./nbatch)
                 if (i+1)*batchsize > len(X)-1:
-                    batch = np.repeat([X[i*batchsize:]], prediction_sample_size, axis=0)
+                    batch = X[i*batchsize:].astype(dtype)
                 else:
-                    batch = np.repeat([X[i * batchsize : (i + 1) * batchsize]], prediction_sample_size, axis=0)
+                    batch = X[i * batchsize : (i + 1) * batchsize].astype(dtype)
                 if return_distrib:
                     #preds = self.sess.run(self.output.output, feed_dict={self.input.input: batch})
                     preds = pred_distrib(batch)
