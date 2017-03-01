@@ -110,7 +110,7 @@ class Input(Layer):
         #self.input = tf.placeholder(shape=(None, None,dim), dtype=tf.float32)
         self.input = tt.matrix(name='input', dtype=dtype) #shape=(None, None, dim)
         self.sample_size = th.shared(self.sample_size)
-        self.output = tt.tile(self.input, (self.sample_size,1,1))
+        self.output = tt.tile(self.input, (tt.cast(self.sample_size, dtype='int'),1,1))
         self.dim = dim
         self.loss = 0
         self.weights = []
