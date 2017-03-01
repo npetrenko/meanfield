@@ -49,18 +49,18 @@ class Dense(Layer):
 
         shape = [self.inp_dim, self.dim]
         #self.mean = tf.Variable(np.random.normal(size=shape, scale=0.01, loc=0), dtype=tf.float32)
-        self.mean = th.shared(np.random.normal(size=shape, scale=0.01, loc=0))
+        self.mean = th.shared(np.random.normal(size=shape, scale=0.01, loc=0).astype(dtype))
         #self.sigma = tf.Variable(np.random.normal(size=shape, scale=0.01, loc=0), dtype=tf.float32)
-        self.sigma = th.shared(np.random.normal(size=shape, scale=0.01, loc=0))
+        self.sigma = th.shared(np.random.normal(size=shape, scale=0.01, loc=0).astype(dtype))
         self.weights += [self.mean, self.sigma]
         
         #self.sigma = tf.log(tf.exp(self.sigma + self.initial_sigma) + 1)
         self.sigma = tt.log1p(tt.exp(self.sigma + self.initial_sigma))
 
         #self.mean_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
-        self.mean_const = th.shared(np.random.normal(size=dim, scale=0.01, loc=0))
+        self.mean_const = th.shared(np.random.normal(size=dim, scale=0.01, loc=0).astype(dtype))
         #self.sigma_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
-        self.sigma_const = th.shared(np.random.normal(size=dim, scale=0.01, loc=0))
+        self.sigma_const = th.shared(np.random.normal(size=dim, scale=0.01, loc=0).astype(dtype))
         self.weights += [self.mean_const, self.sigma_const]
         
         #self.sigma_const = tf.log(tf.exp(self.sigma_const + self.initial_sigma) + 1)
@@ -173,8 +173,8 @@ class Model(Network):
         sample_size = self.sample_size
         
         # create input suitable for feeding into the input node
-        in_tens = np.repeat([X], sample_size, axis=0)
-        in_tens_y = np.repeat([y], sample_size, axis=0)
+        in_tens = np.repeat([X], sample_size, axis=0).astype(dtype)
+        in_tens_y = np.repeat([y], sample_size, axis=0).astype(dtype)
         
         nbatch = int(len(X)/batchsize)
 
@@ -214,7 +214,7 @@ class Model(Network):
                 obj = obj_fun(in_tens, in_tens_y)
                 
                 if valid_set is not None:
-                    preds = self.predict(valid_set[0], prediction_sample_size=100, train_mode=True)
+                    preds = self.predict(valid_set[0].astype(dtype), prediction_sample_size=100, train_mode=True)
                     valid_mse = self.loss_func(preds,y)
                     print('epoch: {} \n train error: {} \n valid_error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, valid_mse, obj))
                 else:
