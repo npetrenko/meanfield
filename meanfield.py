@@ -160,7 +160,7 @@ class Model(Network):
             sh = output.output.shape
             out_resh = output.output.reshape((sh[0]*sh[1],sh[2]))
             self.match_loss = tt.nnet.categorical_crossentropy(out_resh, self.y_ph.reshape((sh[0]*sh[1],sh[2]))).sum()
-            self.match_loss *= tt.cast(sh[0]*sh[1], dtype)
+            #self.match_loss *= tt.cast(sh[0]*sh[1], dtype)
         else:
             Exception('No correct loss specified. Use either "mse" of "crossentropy"')
 
@@ -251,7 +251,7 @@ class Model(Network):
         t0 = time.time()
         arrs = []
         for mat in self.weights:
-            arrs.append(self.sess.run(mat))
+            arrs.append(mat.get_value())
         np.save(path, arrs)
         t1 = time.time()
         
@@ -269,7 +269,7 @@ class Model(Network):
         t0 = time.time()
         arrs = np.load(path, encoding='bytes')
         for mat, arr in zip(self.weights, arrs):
-            self.sess.run(mat.assign(arr))
+            self.sess.run(mat.set_value(arr))
         t1 = time.time()
         print('Done in {} seconds'.format(t1-t0))
         
