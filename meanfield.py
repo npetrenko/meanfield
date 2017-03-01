@@ -215,7 +215,7 @@ class Model(Network):
                 
                 if valid_set is not None:
                     preds = self.predict(valid_set[0].astype(dtype), prediction_sample_size=100, train_mode=True)
-                    valid_mse = self.loss_func(preds,y)
+                    valid_mse = self.loss_func(preds,valid_set[1])
                     print('epoch: {} \n train error: {} \n valid_error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, valid_mse, obj))
                 else:
                     print('epoch: {} \n train error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, obj))
