@@ -49,22 +49,22 @@ class Dense(Layer):
 
         shape = [self.inp_dim, self.dim]
         #self.mean = tf.Variable(np.random.normal(size=shape, scale=0.01, loc=0), dtype=tf.float32)
-        self.mean = th.shared(np.random.normal(size=shape, scale=0.01, loc=0, dtype=dtype))
+        self.mean = th.shared(np.random.normal(size=shape, scale=0.01, loc=0))
         #self.sigma = tf.Variable(np.random.normal(size=shape, scale=0.01, loc=0), dtype=tf.float32)
-        self.sigma = th.shared(np.random.normal(size=shape, scale=0.01, loc=0, dtype=dtype))
+        self.sigma = th.shared(np.random.normal(size=shape, scale=0.01, loc=0))
         self.weights += [self.mean, self.sigma]
         
         #self.sigma = tf.log(tf.exp(self.sigma + self.initial_sigma) + 1)
         self.sigma = tt.log1p(tt.exp(self.sigma + self.initial_sigma))
 
         #self.mean_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
-        self.mean_const = th.shared(np.random.normal(size=dim, scale=0.01, loc=0, dtype=dtype))
+        self.mean_const = th.shared(np.random.normal(size=dim, scale=0.01, loc=0))
         #self.sigma_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
-        self.sigma_const = th.shared(np.random.normal(size=dim, scale=0.01, loc=0, dtype=dtype))
+        self.sigma_const = th.shared(np.random.normal(size=dim, scale=0.01, loc=0))
         self.weights += [self.mean_const, self.sigma_const]
         
         #self.sigma_const = tf.log(tf.exp(self.sigma_const + self.initial_sigma) + 1)
-        self.sigma_const = tt.log1p(th.exp(self.sigma_const + self.initial_sigma))
+        self.sigma_const = tt.log1p(tt.exp(self.sigma_const + self.initial_sigma))
 
         # sample of activation matrixes and biases
         #activation_matrix = tf.random_normal(shape=[sample_size] + shape, dtype=tf.float32,
@@ -76,16 +76,18 @@ class Dense(Layer):
         # calculate matrix multiplication for each sample and add bias
 
         #temp = tf.transpose(tf.tensordot(input_layer.output, activation_matrix, axes=[[2], [1]]), perm=[0,2,1,3])
-        temp = tt.transpose(tt.tensordot(input_layer.output, activation_matrix, axes=[[2],[1]]), axes=[0,2,1,3])
+        #temp = tt.transpose(tt.tensordot(input_layer.output, activation_matrix, axes=[[2],[1]]), axes=[0,2,1,3])
 
         #ind = tf.stack([tf.range(tf.shape(temp)[0])]*2, axis=1)
         #matrixes = tf.gather_nd(temp, indices=ind)
-        matrixes = tt.diagonal(temp, axis1=0, axis2=1)
+        #matrixes = tt.diagonal(temp, axis1=0, axis2=1)
+        matrixes = tt.batched_dot(input_layer.output, activation_matrix)
 
         # index = np.array([[i,i] for i in range(sample_size)], dtype='int')
         #self.logits = tf.gather_nd(tf.tensordot(input_layer.output, activation_matrix, axes=[[2], [1]]), indices=index) + bias
         self.logits = matrixes + bias
-        self.output = act(self.logits)
+        shape = self.logits.shape
+        self.output = act(self.logits.reshape((shape[0]*shape[1], shape[2]))).reshape(shape)
         print(self.output)
 
         # ...
@@ -155,10 +157,10 @@ class Model(Network):
         elif loss == 'crossentropy':
             def loss_func(preds, y):
                 return np.mean(np.argmax(preds, axis=1) - np.argmax(y, axis=1) != 0)
-            sh = output.output.shape[1]
-            out_resh = output.output.reshape((None,sh))
-            self.match_loss = tt.nnet.categorical_crossentropy(out_resh, self.y_ph.reshape((None,sh)))
-            self.match_loss *= tt.cast(output.logits.shape[1], dtype)*tt.cast(output.logits.shape[0], dtype=dtype)
+            sh = output.output.shape
+            out_resh = output.output.reshape((sh[0]*sh[1],sh[2]))
+            self.match_loss = tt.nnet.categorical_crossentropy(out_resh, self.y_ph.reshape((sh[0]*sh[1],sh[2]))).sum()
+            self.match_loss *= tt.cast(sh[0]*sh[1], dtype)
         else:
             Exception('No correct loss specified. Use either "mse" of "crossentropy"')
 
