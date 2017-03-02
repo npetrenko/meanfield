@@ -7,6 +7,7 @@ import time
 from tqdm import tqdm
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 import lasagne
+from theano import In
 
 rng = RandomStreams()
 dtype = th.config.floatX
@@ -109,20 +110,14 @@ class Input(Layer):
         '''
         #self.input = tf.placeholder(shape=(None, None,dim), dtype=tf.float32)
         self.input = tt.matrix(name='input', dtype=dtype) #shape=(None, None, dim)
-        self.sample_size = th.shared([0]*self.sample_size)
-        self.output = tt.tile(self.input, (self.sample_size.shape[0],1,1))
+        self.sample_size = tt.iscalar('sample size controller')
+        self.output = tt.tile(self.input, (self.sample_size,1,1))
         self.dim = dim
         self.loss = 0
         self.weights = []
 
 
 class Model(Network):
-
-    def terminate(self):
-        '''
-        close tensorflow session
-        '''
-        self.sess.close()
 
     def __init__(self, input, output, updates = lasagne.updates.adam, loss = 'mse'):
         '''
@@ -140,7 +135,7 @@ class Model(Network):
         # create placeholder for target values
         #self.y_ph = tf.placeholder(shape=(None, None, output.dim), dtype=tf.float32)
         self.y = tt.matrix('y',dtype)
-        self.y_ph = tt.tile(self.y, (self.sample_size,1,1))
+        self.y_ph = tt.tile(self.y, (input.sample_size,1,1))
         #tt.tensor3(name='y_ph', dtype=dtype) #shape=(None, None, output.dim)
 
         # parameter which helps to build the final loss
@@ -205,9 +200,11 @@ class Model(Network):
             #
             #do we need a var init here?
 
-        obj_fun = th.function([self.input.input, self.y], self.objective.mean())
+        obj_fun = th.function([ self.input.input, self.y,
+                                In(self.input.sample_size, value=sample_size)], self.objective.mean())
 
-        train = th.function([self.input.input, self.y], updates=self.updates(self.loss, self.weights))
+        train = th.function([ self.input.input, self.y,
+                              In(self.input.sample_size, value=sample_size)], updates=self.updates(self.loss, self.weights))
 
         for epoch in range(nepoch):
             
@@ -287,13 +284,12 @@ class Model(Network):
             bar = tqdm(total=100)
         # exception handling required for tqdm to work correctly
         try:
-            self.input.sample_size.set_value([0]*prediction_sample_size)
             pred_op = tt.mean(self.output.output, axis=0)
             std_op =  tt.sum(tt.sqrt(tt.mean((self.output.output - pred_op)**2, axis=0)), axis=-1)
 
-            pred_distrib = th.function([self.input.input], self.output.output)
-            pred = th.function([self.input.input], pred_op)
-            predstd = th.function([self.input.input], [pred_op, std_op])
+            pred_distrib = th.function([self.input.input, In(self.input.sample_size, value=prediction_sample_size)], self.output.output)
+            pred = th.function([self.input.input, In(self.input.sample_size, value=prediction_sample_size)], pred_op)
+            predstd = th.function([self.input.input, In(self.input.sample_size, value=prediction_sample_size)], [pred_op, std_op])
             # prepare data for feeding into the NN
             nbatch = int(len(X)/batchsize) + 1
 
@@ -322,7 +318,6 @@ class Model(Network):
         finally:
             if not train_mode:
                 bar.close()
-            self.input.sample_size.set_value([0]*self.sample_size)
         if return_distrib:
             return np.concatenate(temp, axis=1)
         else:
