@@ -38,64 +38,48 @@ class Dense(Layer):
         :param act: tensorflow activation function
         :param prior: standard deviation of prior
         '''
-        #prior = tf.Variable(prior, dtype=tf.float32, trainable=False, name='prior_' + name)
+
         prior = th.shared(prior, name='prior_' + name)
         
         self.weights = input_layer.weights
 
-        #sample_size = tf.shape(input_layer.output)[0]
+
         sample_size = input_layer.output.shape[0]
         self.dim = dim
         self.inp_dim = input_layer.dim
 
         shape = [self.inp_dim, self.dim]
-        #self.mean = tf.Variable(np.random.normal(size=shape, scale=0.01, loc=0), dtype=tf.float32)
+
         self.mean = th.shared(np.random.normal(size=shape, scale=0.01, loc=0).astype(dtype))
-        #self.sigma = tf.Variable(np.random.normal(size=shape, scale=0.01, loc=0), dtype=tf.float32)
         self.sigma = th.shared(np.random.normal(size=shape, scale=0.01, loc=0).astype(dtype))
         self.weights += [self.mean, self.sigma]
-        
-        #self.sigma = tf.log(tf.exp(self.sigma + self.initial_sigma) + 1)
         self.sigma = tt.log1p(tt.exp(self.sigma + self.initial_sigma))
 
-        #self.mean_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
+
         self.mean_const = th.shared(np.random.normal(size=dim, scale=0.01, loc=0).astype(dtype))
-        #self.sigma_const = tf.Variable(np.random.normal(size=dim, scale=0.01, loc=0), dtype=tf.float32)
         self.sigma_const = th.shared(np.random.normal(size=dim, scale=0.01, loc=0).astype(dtype))
         self.weights += [self.mean_const, self.sigma_const]
-        
-        #self.sigma_const = tf.log(tf.exp(self.sigma_const + self.initial_sigma) + 1)
         self.sigma_const = tt.log1p(tt.exp(self.sigma_const + self.initial_sigma))
 
         # sample of activation matrixes and biases
-        #activation_matrix = tf.random_normal(shape=[sample_size] + shape, dtype=tf.float32,
-        #                                     stddev=1) * self.sigma + self.mean
         activation_matrix = rng.normal(size=[sample_size] + shape,dtype=dtype) * self.sigma + self.mean
-        #bias = tf.random_normal(shape=[sample_size, 1, dim], dtype=tf.float32, stddev=1) * self.sigma_const + self.mean_const
+
         bias = rng.normal(size=[sample_size, 1, dim], dtype=dtype) * self.sigma_const + self.mean_const
 
         # calculate matrix multiplication for each sample and add bias
 
-        #temp = tf.transpose(tf.tensordot(input_layer.output, activation_matrix, axes=[[2], [1]]), perm=[0,2,1,3])
-        #temp = tt.transpose(tt.tensordot(input_layer.output, activation_matrix, axes=[[2],[1]]), axes=[0,2,1,3])
-
-        #ind = tf.stack([tf.range(tf.shape(temp)[0])]*2, axis=1)
-        #matrixes = tf.gather_nd(temp, indices=ind)
-        #matrixes = tt.diagonal(temp, axis1=0, axis2=1)
         matrixes = tt.batched_dot(input_layer.output, activation_matrix)
 
         # index = np.array([[i,i] for i in range(sample_size)], dtype='int')
-        #self.logits = tf.gather_nd(tf.tensordot(input_layer.output, activation_matrix, axes=[[2], [1]]), indices=index) + bias
+
         self.logits = matrixes + bias
         shape = self.logits.shape
         self.output = act(self.logits.reshape((shape[0]*shape[1], shape[2]))).reshape(shape)
         print(self.output)
 
         # ...
-        #l1 = tf.reduce_sum(-tf.log(np.sqrt(2 * pi) * self.sigma)) + tf.reduce_sum( -tf.log(np.sqrt(2 * pi) * self.sigma_const) )
         l1 = tt.sum(-tt.log(np.sqrt(2 * pi) * self.sigma)) + tt.sum(-tt.log(np.sqrt(2 * pi) * self.sigma_const))
         # prior loss
-        #l2 = (-tf.reduce_sum((activation_matrix ** 2)) - tf.reduce_sum((bias ** 2))) / (2 * prior**2) #probably i need a square here
         l2 = (-tt.sum((activation_matrix ** 2)) - tt.sum((bias ** 2))) / (2 * prior ** 2)
         # feeding loss to the next layer
         self.loss = l1 - l2
@@ -108,7 +92,6 @@ class Input(Layer):
         '''
         :param dim: number of sensors in the first layer
         '''
-        #self.input = tf.placeholder(shape=(None, None,dim), dtype=tf.float32)
         self.input = tt.matrix(name='input', dtype=dtype) #shape=(None, None, dim)
         self.sample_size = tt.iscalar('sample size controller')
         self.output = tt.tile(self.input, (self.sample_size,1,1))
@@ -133,10 +116,8 @@ class Model(Network):
         self.var_loss = output.loss
 
         # create placeholder for target values
-        #self.y_ph = tf.placeholder(shape=(None, None, output.dim), dtype=tf.float32)
         self.y = tt.matrix('y',dtype)
         self.y_ph = tt.tile(self.y, (input.sample_size,1,1))
-        #tt.tensor3(name='y_ph', dtype=dtype) #shape=(None, None, output.dim)
 
         # parameter which helps to build the final loss
         self.loss_final = False
@@ -158,7 +139,6 @@ class Model(Network):
             sh = output.output.shape
             out_resh = output.output.reshape((sh[0]*sh[1],sh[2]))
             self.match_loss = tt.nnet.categorical_crossentropy(out_resh, self.y_ph.reshape((sh[0]*sh[1],sh[2]))).sum()
-            #self.match_loss *= tt.cast(sh[0]*sh[1], dtype)
         else:
             Exception('No correct loss specified. Use either "mse" of "crossentropy"')
 
@@ -171,8 +151,6 @@ class Model(Network):
         sample_size = self.sample_size
         
         # create input suitable for feeding into the input node
-        #in_tens = np.repeat([X], sample_size, axis=0).astype(dtype)
-        #in_tens_y = np.repeat([y], sample_size, axis=0).astype(dtype)
         in_tens = X.astype(dtype)
         in_tens_y = y.astype(dtype)
         
@@ -183,7 +161,6 @@ class Model(Network):
             loss = self.match_loss + self.var_loss / (nbatch * 1.)
             loss = loss / sample_size
             self.loss = loss
-            #self.optimizer = self.optimizer.minimize(self.loss)
             self.loss_final = True
 
             # remember batchsize in case of change
@@ -195,7 +172,6 @@ class Model(Network):
             loss = loss / sample_size
             self.loss = loss
             self.batchsize = batchsize
-            #self.optimizer = self.optimizer.minimize(self.loss)
             #
             #
             #do we need a var init here?
@@ -212,7 +188,6 @@ class Model(Network):
             if epoch % log_freq == 0:
                 preds = self.predict(in_tens, prediction_sample_size=100, train_mode=True)
                 train_mse = self.loss_func(preds, y)
-                #obj = self.sess.run(tf.reduce_mean(self.objective), feed_dict={self.input.input: in_tens,self.y_ph: in_tens_y})
                 obj = obj_fun(in_tens, in_tens_y)
                 
                 if valid_set is not None:
@@ -303,11 +278,9 @@ class Model(Network):
                 else:
                     batch = X[i * batchsize : (i + 1) * batchsize].astype(dtype)
                 if return_distrib:
-                    #preds = self.sess.run(self.output.output, feed_dict={self.input.input: batch})
                     preds = pred_distrib(batch)
                 else:
                     if return_std:
-                        #preds, std = self.sess.run([pred_op, std_op], feed_dict = {self.input.input : batch})
                         preds, std = predstd(batch)
                         stds.append(std)
                     else:
