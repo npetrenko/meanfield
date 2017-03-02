@@ -186,16 +186,17 @@ class Model(Network):
             
             # print logs every log_freq epochs:
             if epoch % log_freq == 0:
-                preds = self.predict(in_tens, prediction_sample_size=100, train_mode=True)
-                train_mse = self.loss_func(preds, y)
+                #preds = self.predict(in_tens, prediction_sample_size=100, train_mode=True)
+                #train_mse = self.loss_func(preds, in_tens_y)
                 obj = obj_fun(in_tens, in_tens_y)
                 
-                if valid_set is not None:
-                    preds = self.predict(valid_set[0].astype(dtype), prediction_sample_size=100, train_mode=True)
-                    valid_mse = self.loss_func(preds,valid_set[1])
-                    print('epoch: {} \n train error: {} \n valid_error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, valid_mse, obj))
-                else:
-                    print('epoch: {} \n train error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, obj))
+                #if valid_set is not None:
+                    #preds = self.predict(valid_set[0].astype(dtype), prediction_sample_size=100, train_mode=True)
+                    #valid_mse = self.loss_func(preds, valid_set[1])
+                    #print('epoch: {} \n train error: {} \n valid_error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, valid_mse, obj))
+                #else:
+                    #print('epoch: {} \n train error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, obj))
+                print('epoch: {} \n objective: {}\n\n\n'.format(epoch, obj))
                 
                 # record NN weights if the backup dir is set:
                 if running_backup_dir is not None:
