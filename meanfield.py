@@ -6,7 +6,7 @@ from theano import tensor as tt
 import time
 from tqdm import tqdm
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
-import lasagne
+from lasagne import updates
 from theano import In
 
 rng = RandomStreams()
@@ -31,8 +31,10 @@ class Layer(Network):
 
 class Dense(Layer):
     initial_sigma = -6
+
     def __init__(self, dim, input_layer, act=tt.nnet.relu, prior=3, name=''):
         '''
+        initialize dense layer
         :param dim: number of neurons in the layer
         :param input_layer: input layer calss object
         :param act: tensorflow activation function
@@ -42,7 +44,6 @@ class Dense(Layer):
         prior = th.shared(prior, name='prior_' + name)
         
         self.weights = input_layer.weights
-
 
         sample_size = input_layer.output.shape[0]
         self.dim = dim
@@ -55,14 +56,13 @@ class Dense(Layer):
         self.weights += [self.mean, self.sigma]
         self.sigma = tt.log1p(tt.exp(self.sigma + self.initial_sigma))
 
-
         self.mean_const = th.shared(np.random.normal(size=dim, scale=0.01, loc=0).astype(dtype))
         self.sigma_const = th.shared(np.random.normal(size=dim, scale=0.01, loc=0).astype(dtype))
         self.weights += [self.mean_const, self.sigma_const]
         self.sigma_const = tt.log1p(tt.exp(self.sigma_const + self.initial_sigma))
 
         # sample of activation matrixes and biases
-        activation_matrix = rng.normal(size=[sample_size] + shape,dtype=dtype) * self.sigma + self.mean
+        activation_matrix = rng.normal(size=[sample_size] + shape, dtype=dtype) * self.sigma + self.mean
 
         bias = rng.normal(size=[sample_size, 1, dim], dtype=dtype) * self.sigma_const + self.mean_const
 
@@ -90,11 +90,13 @@ class Dense(Layer):
 class Input(Layer):
     def __init__(self, dim):
         '''
+        initialize an input layer
         :param dim: number of sensors in the first layer
+        :return: instance of input layer calss
         '''
-        self.input = tt.matrix(name='input', dtype=dtype) #shape=(None, None, dim)
+        self.input = tt.matrix(name='input', dtype=dtype)
         self.sample_size = tt.iscalar('sample size controller')
-        self.output = tt.tile(self.input, (self.sample_size,1,1))
+        self.output = tt.tile(self.input, (self.sample_size, 1, 1))
         self.dim = dim
         self.loss = 0
         self.weights = []
@@ -102,11 +104,13 @@ class Input(Layer):
 
 class Model(Network):
 
-    def __init__(self, input, output, updates = lasagne.updates.adam, loss = 'mse'):
+    def __init__(self, input, output, nnupdates=updates.adam, loss = 'mse'):
         '''
+        initialize nn model
         :param input: input node of the neural network
         :param output: output node of the network
-        :param optimizer: tensorflow optimizer
+        :param nnupdates: lasagne updates optimizer
+        :return: model class instance
         '''
 
         self.weights = output.weights
@@ -125,7 +129,7 @@ class Model(Network):
         self.input = input
         self.output = output
 
-        self.updates = updates
+        self.updates = nnupdates
 
 
 
@@ -137,8 +141,8 @@ class Model(Network):
             def loss_func(preds, y):
                 return np.mean(np.argmax(preds, axis=1) - np.argmax(y, axis=1) != 0)
             sh = output.output.shape
-            out_resh = output.output.reshape((sh[0]*sh[1],sh[2]))
-            self.match_loss = tt.nnet.categorical_crossentropy(out_resh, self.y_ph.reshape((sh[0]*sh[1],sh[2]))).sum()
+            out_resh = output.output.reshape((sh[0]*sh[1], sh[2]))
+            self.match_loss = tt.nnet.categorical_crossentropy(out_resh, self.y_ph.reshape((sh[0]*sh[1], sh[2]))).sum()
         else:
             Exception('No correct loss specified. Use either "mse" of "crossentropy"')
 
@@ -169,7 +173,7 @@ class Model(Network):
         # reconfigure loss in case of batch size change
         if self.loss_final and self.batchsize != batchsize:
             loss = self.match_loss + self.var_loss / (nbatch * 1.)
-            loss = loss / sample_size
+            loss /= sample_size
             self.loss = loss
             self.batchsize = batchsize
             #
@@ -179,24 +183,25 @@ class Model(Network):
         obj_fun = th.function([ self.input.input, self.y,
                                 In(self.input.sample_size, value=sample_size)], self.objective.mean())
 
-        train = th.function([ self.input.input, self.y,
-                              In(self.input.sample_size, value=sample_size)], updates=self.updates(self.loss, self.weights))
+        train = th.function([self.input.input, self.y,
+                             In(self.input.sample_size, value=sample_size)], updates=self.updates(self.loss, self.weights))
 
         for epoch in range(nepoch):
             
             # print logs every log_freq epochs:
             if epoch % log_freq == 0:
-                #preds = self.predict(in_tens, prediction_sample_size=100, train_mode=True)
-                #train_mse = self.loss_func(preds, in_tens_y)
+                preds = self.predict(in_tens, prediction_sample_size=100, train_mode=True)
+                train_mse = self.loss_func(preds, in_tens_y)
                 obj = obj_fun(in_tens, in_tens_y)
                 
-                #if valid_set is not None:
-                    #preds = self.predict(valid_set[0].astype(dtype), prediction_sample_size=100, train_mode=True)
-                    #valid_mse = self.loss_func(preds, valid_set[1])
-                    #print('epoch: {} \n train error: {} \n valid_error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, valid_mse, obj))
-                #else:
-                    #print('epoch: {} \n train error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, obj))
-                print('epoch: {} \n objective: {}\n\n\n'.format(epoch, obj))
+                if valid_set is not None:
+                    preds = self.predict(valid_set[0].astype(dtype), prediction_sample_size=100, train_mode=True)
+                    valid_mse = self.loss_func(preds, valid_set[1])
+                    print('epoch: {} \n train error: {} \n\
+                           valid_error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, valid_mse, obj))
+                else:
+                    print('epoch: {} \n train error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, obj))
+                #print('epoch: {} \n objective: {}\n\n\n'.format(epoch, obj))
                 
                 # record NN weights if the backup dir is set:
                 if running_backup_dir is not None:
