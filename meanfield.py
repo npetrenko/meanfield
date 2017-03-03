@@ -217,7 +217,7 @@ class Model(Network):
             # shuffle data every shuffle_freq epochs
             if shuffle_freq is not None:
                 if epoch % shuffle_freq == 0:
-                    shuffle = np.random.permutation(in_tens.shape[1])
+                    shuffle = np.random.permutation(in_tens.shape[0])
                     # not running gc right after shuffle causes memory leak
                     gc.collect()
                     in_tens = in_tens[shuffle, :]
@@ -268,9 +268,12 @@ class Model(Network):
             pred_op = tt.mean(self.output.output, axis=0)
             std_op =  tt.sum(tt.sqrt(tt.mean((self.output.output - pred_op)**2, axis=0)), axis=-1)
 
-            pred_distrib = th.function([self.input.input, In(self.input.sample_size, value=prediction_sample_size)], self.output.output)
-            pred = th.function([self.input.input, In(self.input.sample_size, value=prediction_sample_size)], pred_op)
-            predstd = th.function([self.input.input, In(self.input.sample_size, value=prediction_sample_size)], [pred_op, std_op])
+            pred_distrib = th.function([self.input.input,
+                                        In(self.input.sample_size, value=prediction_sample_size)], self.output.output)
+            pred = th.function([self.input.input,
+                                In(self.input.sample_size, value=prediction_sample_size)], pred_op)
+            predstd = th.function([self.input.input,
+                                   In(self.input.sample_size, value=prediction_sample_size)], [pred_op, std_op])
             # prepare data for feeding into the NN
             nbatch = int(len(X)/batchsize) + 1
 
