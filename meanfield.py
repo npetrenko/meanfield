@@ -150,7 +150,7 @@ class Model(Network):
 
         self.objective = self.match_loss + self.var_loss
 
-    def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1, running_backup_dir=None):
+    def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1, running_backup_dir=None, scale_var_grad=1):
         
         sample_size = self.sample_size
         
@@ -183,8 +183,13 @@ class Model(Network):
         obj_fun = th.function([ self.input.input, self.y,
                                 In(self.input.sample_size, value=sample_size)], self.objective.mean())
 
+        grad = th.grad(self.loss, self.weights)
+        for i in range(len(self.weights)):
+            if i%2 == 1:
+                grad[i] *= scale_var_grad
+
         train = th.function([self.input.input, self.y,
-                             In(self.input.sample_size, value=sample_size)], updates=self.updates(self.loss, self.weights))
+                             In(self.input.sample_size, value=sample_size)], updates=self.updates(grad, self.weights))
 
         for epoch in range(nepoch):
             
@@ -197,8 +202,7 @@ class Model(Network):
                 if valid_set is not None:
                     preds = self.predict(valid_set[0].astype(dtype), prediction_sample_size=100, train_mode=True)
                     valid_mse = self.loss_func(preds, valid_set[1])
-                    print('epoch: {} \n train error: {} \n\
-                           valid_error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, valid_mse, obj))
+                    print('epoch: {} \n train error: {} \nvalid_error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, valid_mse, obj))
                 else:
                     print('epoch: {} \n train error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, obj))
                 #print('epoch: {} \n objective: {}\n\n\n'.format(epoch, obj))
