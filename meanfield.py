@@ -199,6 +199,8 @@ class Model(Network):
             if i%2 == 1:
                 grad_scaler[i] *= scale_var_grad
 
+        grad_scaler = th.shared(grad_scaler)
+
         train = th.function([self.input.input, self.y,
                              In(self.input.sample_size, value=sample_size)], updates=self.updates(grad*grad_scaler, self.weights))
         to_write = None
