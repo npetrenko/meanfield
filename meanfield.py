@@ -71,7 +71,7 @@ class Dense(Layer):
 
         #matrixes = tt.batched_dot(input_layer.output, activation_matrix)
 
-        mb, _ = th.scan(lambda i: tt.dot(input_layer.output[i],activation_matrix[i]), sequences=[tt.arange(sample_size)])
+        mb, _ = th.scan(lambda i: tt.dot(input_layer.output[i], activation_matrix[i]), sequences=[tt.arange(sample_size)], non_sequences=[input_layer.output, activation_matrix])
 
         # index = np.array([[i,i] for i in range(sample_size)], dtype='int')
 
