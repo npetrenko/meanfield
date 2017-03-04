@@ -153,7 +153,10 @@ class Model(Network):
 
         self.objective = self.match_loss + self.var_loss
 
-    def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1, running_backup_dir=None, scale_var_grad=1):
+    def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1, running_backup_dir=None, scale_var_grad=1, logfile=None):
+
+        if logfile:
+            logs = file.open(logfile,'w')
         
         sample_size = self.sample_size
         
@@ -197,47 +200,53 @@ class Model(Network):
 
         train = th.function([self.input.input, self.y,
                              In(self.input.sample_size, value=sample_size)], updates=self.updates(grad, self.weights))
+        try:
+            for epoch in range(nepoch):
+                # update the number of passed epochs
+                self.batch_iterated += 1
+                if loss_scaler.eval() < 1-0.0001:
+                    batch_iterated_ph.set_value(np.array(self.batch_iterated, dtype=dtype))
 
-        for epoch in range(nepoch):
-            # update the number of passed epochs
-            self.batch_iterated += 1
-            if loss_scaler.eval() < 1-0.0001:
-                batch_iterated_ph.set_value(np.array(self.batch_iterated, dtype=dtype))
+                # print logs every log_freq epochs:
+                if epoch % log_freq == 0:
+                    preds = self.predict(in_tens, prediction_sample_size=100, train_mode=True)
+                    train_mse = self.loss_func(preds, in_tens_y)
+                    obj = obj_fun(in_tens, in_tens_y)
 
-            # print logs every log_freq epochs:
-            if epoch % log_freq == 0:
-                preds = self.predict(in_tens, prediction_sample_size=100, train_mode=True)
-                train_mse = self.loss_func(preds, in_tens_y)
-                obj = obj_fun(in_tens, in_tens_y)
-                
-                if valid_set is not None:
-                    preds = self.predict(valid_set[0].astype(dtype), prediction_sample_size=100, train_mode=True)
-                    valid_mse = self.loss_func(preds, valid_set[1])
-                    print('epoch: {} \n  train error: {} \n  valid_error: {} \n  objective: {}\n  loss_scale: {}\n\n'.format(epoch,
-                                                                                                                     train_mse, valid_mse, obj, loss_scaler.eval()))
-                else:
-                    print('epoch: {} \n  train error: {} \n  objective: {}\n  loss_scale: {}\n\n'.format(epoch, train_mse, obj, loss_scaler.eval()))
-                #print('epoch: {} \n objective: {}\n\n\n'.format(epoch, obj))
-                
-                # record NN weights if the backup dir is set:
-                if running_backup_dir is not None:
-                        if valid_set is not None:
-                            self.save(running_backup_dir+'runnung_tr{}_test{}.npy'.format(train_mse, valid_mse))
-                        else:
-                            self.save(running_backup_dir+'runnung_tr{}.npy'.format(train_mse))
+                    if valid_set is not None:
+                        preds = self.predict(valid_set[0].astype(dtype), prediction_sample_size=100, train_mode=True)
+                        valid_mse = self.loss_func(preds, valid_set[1])
+                        logstr = 'epoch: {} \n  train error: {} \n  valid_error: {} \n  objective: {}\n  loss_scale: {}\n\n'.format(epoch,
+                                                                                                                         train_mse, valid_mse, obj, loss_scaler.eval())
+                    else:
+                        logstr = 'epoch: {} \n  train error: {} \n  objective: {}\n  loss_scale: {}\n\n'.format(epoch, train_mse, obj, loss_scaler.eval())
+                    #print('epoch: {} \n objective: {}\n\n\n'.format(epoch, obj))
+                    print(logstr)
+                    if logfile:
+                        logs.write(logstr)
 
-            for i in range(nbatch):
-                train(in_tens[batchsize * i:batchsize * (i + 1), :],
-                      in_tens_y[batchsize * i:batchsize * (i + 1), :])
-            
-            # shuffle data every shuffle_freq epochs
-            if shuffle_freq is not None:
-                if epoch % shuffle_freq == 0:
-                    shuffle = np.random.permutation(in_tens.shape[0])
-                    # not running gc right after shuffle causes memory leak
-                    gc.collect()
-                    in_tens = in_tens[shuffle, :]
-                    in_tens_y = in_tens_y[shuffle, :]
+                    # record NN weights if the backup dir is set:
+                    if running_backup_dir is not None:
+                            if valid_set is not None:
+                                self.save(running_backup_dir+'runnung_tr{}_test{}.npy'.format(train_mse, valid_mse))
+                            else:
+                                self.save(running_backup_dir+'runnung_tr{}.npy'.format(train_mse))
+
+                for i in range(nbatch):
+                    train(in_tens[batchsize * i:batchsize * (i + 1), :],
+                          in_tens_y[batchsize * i:batchsize * (i + 1), :])
+
+                # shuffle data every shuffle_freq epochs
+                if shuffle_freq is not None:
+                    if epoch % shuffle_freq == 0:
+                        shuffle = np.random.permutation(in_tens.shape[0])
+                        # not running gc right after shuffle causes memory leak
+                        gc.collect()
+                        in_tens = in_tens[shuffle, :]
+                        in_tens_y = in_tens_y[shuffle, :]
+        finally:
+            if logfile:
+                logf.close()
 
     def save(self, path):
         '''
