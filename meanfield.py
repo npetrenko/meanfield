@@ -213,9 +213,10 @@ class Model(Network):
                 if valid_set is not None:
                     preds = self.predict(valid_set[0].astype(dtype), prediction_sample_size=100, train_mode=True)
                     valid_mse = self.loss_func(preds, valid_set[1])
-                    print('epoch: {} \n train error: {} \nvalid_error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, valid_mse, obj))
+                    print('epoch: {} \ntrain error: {} \nvalid_error: {} \nobjective: {}\nloss_scale: {}\n\n'.format(epoch,
+                                                                                                                     train_mse, valid_mse, obj, loss_scaler.eval()))
                 else:
-                    print('epoch: {} \n train error: {} \n objective: {}\n\n\n'.format(epoch, train_mse, obj))
+                    print('epoch: {} \ntrain error: {} \nobjective: {}\nloss_scale: {}\n\n'.format(epoch, train_mse, obj, loss_scaler.eval()))
                 #print('epoch: {} \n objective: {}\n\n\n'.format(epoch, obj))
                 
                 # record NN weights if the backup dir is set:
