@@ -104,12 +104,13 @@ class Input(Layer):
 
 class Model(Network):
 
-    def __init__(self, input, output, nnupdates=updates.adam, loss = 'mse'):
+    def __init__(self, input, output, nnupdates=updates.adam, loss = 'mse', init_value_loss_repar = -3, loss_rapar_speed = 1):
         '''
         initialize nn model
         :param input: input node of the neural network
         :param output: output node of the network
         :param nnupdates: lasagne updates optimizer
+        :param init_value_loss_repar: starting value of match/var loss scaling
         :return: model class instance
         '''
 
@@ -130,6 +131,8 @@ class Model(Network):
         self.output = output
 
         self.updates = nnupdates
+        self.batch_iterated = init_value_loss_repar
+        self.repar_speed = loss_rapar_speed
 
 
 
@@ -160,9 +163,13 @@ class Model(Network):
         
         nbatch = int(len(X)/batchsize)
 
+        batch_iterated_ph = th.shared(self.batch_iterated, 'batch number placeholder')
+        repar_speed = th.shared(self.repar_speed, 'repar speed constant')
+        loss_scaler = 1/(1 + tt.exp(-batch_iterated_ph))
+
         if not self.loss_final:
 
-            loss = self.match_loss + self.var_loss / (nbatch * 1.)
+            loss = loss_scaler*self.match_loss + self.var_loss / (nbatch * 1.)
             loss = loss / sample_size
             self.loss = loss
             self.loss_final = True
@@ -172,7 +179,7 @@ class Model(Network):
 
         # reconfigure loss in case of batch size change
         if self.loss_final and self.batchsize != batchsize:
-            loss = self.match_loss + self.var_loss / (nbatch * 1.)
+            loss = loss_scaler*self.match_loss + self.var_loss / (nbatch * 1.)
             loss /= sample_size
             self.loss = loss
             self.batchsize = batchsize
@@ -192,7 +199,11 @@ class Model(Network):
                              In(self.input.sample_size, value=sample_size)], updates=self.updates(grad, self.weights))
 
         for epoch in range(nepoch):
-            
+            # update the number of passed epochs
+            self.batch_iterated += 1
+            if loss_scaler.eval() < 1-0.0001:
+                batch_iterated_ph.set_value(self.batch_iterated)
+
             # print logs every log_freq epochs:
             if epoch % log_freq == 0:
                 preds = self.predict(in_tens, prediction_sample_size=100, train_mode=True)
