@@ -76,8 +76,8 @@ class Dense(Layer):
         # index = np.array([[i,i] for i in range(sample_size)], dtype='int')
 
         self.logits = mb
-        shape = self.logits.shape
-        self.output = act(self.logits.reshape((shape[0]*shape[1], shape[2]))).reshape(shape)
+
+        self.output = act(self.logits)
         print(self.output)
 
         # ...
