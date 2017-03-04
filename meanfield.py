@@ -195,14 +195,14 @@ class Model(Network):
 
         grad = th.grad(self.loss, self.weights)
 
-        grad_scaler = np.ones(shape=(len(self.weights),), dtype=dtype)
+        # grad_scaler = np.ones(shape=(len(self.weights),), dtype=dtype)
         for i in range(len(self.weights)):
             if i%2 == 1:
-                grad_scaler[i] *= scale_var_grad
+                grad[i] *= scale_var_grad
 
-        grad_scaler_th = tt.constant(grad_scaler, name='gradient scaler')
+        # grad_scaler_th = tt.constant(grad_scaler, name='gradient scaler')
 
-        grad *= grad_scaler_th
+        # grad *= grad_scaler_th
         train = th.function([self.input.input, self.y,
                              In(self.input.sample_size, value=sample_size)], updates=self.updates(grad, self.weights))
         to_write = None
