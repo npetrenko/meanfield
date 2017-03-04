@@ -163,8 +163,8 @@ class Model(Network):
         
         nbatch = int(len(X)/batchsize)
 
-        batch_iterated_ph = th.shared(self.batch_iterated, 'batch number placeholder')
-        repar_speed = th.shared(self.repar_speed, 'repar speed constant')
+        batch_iterated_ph = th.shared(np.array(self.batch_iterated, dtype=dtype), 'batch number placeholder')
+        repar_speed = th.shared(np.array(self.repar_speed, dtype=dtype), 'repar speed constant')
         loss_scaler = 1/(1 + tt.exp(-batch_iterated_ph))
 
         if not self.loss_final:
@@ -202,7 +202,7 @@ class Model(Network):
             # update the number of passed epochs
             self.batch_iterated += 1
             if loss_scaler.eval() < 1-0.0001:
-                batch_iterated_ph.set_value(self.batch_iterated)
+                batch_iterated_ph.set_value(np.array(self.batch_iterated, dtype=dtype))
 
             # print logs every log_freq epochs:
             if epoch % log_freq == 0:
