@@ -156,7 +156,7 @@ class Model(Network):
     def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1, running_backup_dir=None, scale_var_grad=1, logfile=None):
 
         if logfile:
-            logs = file.open(logfile,'w')
+            logs = open(logfile,'w')
         
         sample_size = self.sample_size
         
