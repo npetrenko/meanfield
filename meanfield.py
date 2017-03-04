@@ -165,7 +165,7 @@ class Model(Network):
 
         batch_iterated_ph = th.shared(np.array(self.batch_iterated, dtype=dtype), 'batch number placeholder')
         repar_speed = th.shared(np.array(self.repar_speed, dtype=dtype), 'repar speed constant')
-        loss_scaler = 1/(1 + tt.exp(-batch_iterated_ph))
+        loss_scaler = 1/(1 + tt.exp(-batch_iterated_ph*repar_speed))
 
         if not self.loss_final:
 
