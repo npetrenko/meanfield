@@ -189,20 +189,18 @@ class Model(Network):
             loss /= sample_size
             self.loss = loss
             self.batchsize = batchsize
-            #
-            #
-            #do we need a var init here?
 
         obj_fun = th.function([ self.input.input, self.y,
                                 In(self.input.sample_size, value=sample_size)], self.objective.mean())
 
         grad = th.grad(self.loss, self.weights)
+        grad_scaler = np.ones(len(self.weights), dtype)
         for i in range(len(self.weights)):
             if i%2 == 1:
-                grad[i] *= scale_var_grad
+                grad_scaler[i] *= scale_var_grad
 
         train = th.function([self.input.input, self.y,
-                             In(self.input.sample_size, value=sample_size)], updates=self.updates(grad, self.weights))
+                             In(self.input.sample_size, value=sample_size)], updates=self.updates(grad*grad_scaler, self.weights))
         to_write = None
         try:
             for epoch in range(nepoch):
