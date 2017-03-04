@@ -194,12 +194,13 @@ class Model(Network):
                                 In(self.input.sample_size, value=sample_size)], self.objective.mean())
 
         grad = th.grad(self.loss, self.weights)
+
         grad_scaler = np.ones(len(self.weights), dtype)
         for i in range(len(self.weights)):
             if i%2 == 1:
                 grad_scaler[i] *= scale_var_grad
 
-        grad_scaler = th.shared(grad_scaler)
+        grad_scaler = th.shared(grad_scaler,'gradient scaler')
 
         train = th.function([self.input.input, self.y,
                              In(self.input.sample_size, value=sample_size)], updates=self.updates(grad*grad_scaler, self.weights))
