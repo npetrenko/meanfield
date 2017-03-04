@@ -203,7 +203,7 @@ class Model(Network):
 
         train = th.function([self.input.input, self.y,
                              In(self.input.sample_size, value=sample_size)], updates=self.updates(grad, self.weights))
-
+        to_write = None
         try:
             for epoch in range(nepoch):
                 # update the number of passed epochs
@@ -249,12 +249,12 @@ class Model(Network):
                         in_tens = in_tens[shuffle, :]
                         in_tens_y = in_tens_y[shuffle, :]
         except (Exception, BaseException) as exc:
-            if logfile:
-                logf.write(traceback.format_exc(exc))
-                logf.close()
+            to_write = traceback.format_exc(exc)
             raise exc
         finally:
             if logfile:
+                if to_write:
+                    logf.write(to_write)
                 logf.close()
 
     def save(self, path):
