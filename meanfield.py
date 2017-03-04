@@ -71,11 +71,11 @@ class Dense(Layer):
 
         #matrixes = tt.batched_dot(input_layer.output, activation_matrix)
 
-        matrixes = th.scan(lambda x,y: tt.dot(x,y), sequences=[input_layer.output, activation_matrix])
+        mb = th.scan(lambda x,y: tt.dot(x,y) + bias, sequences=[input_layer.output, activation_matrix])
 
         # index = np.array([[i,i] for i in range(sample_size)], dtype='int')
 
-        self.logits = matrixes + bias
+        self.logits = mb
         shape = self.logits.shape
         self.output = act(self.logits.reshape((shape[0]*shape[1], shape[2]))).reshape(shape)
         print(self.output)
