@@ -166,9 +166,12 @@ class Model(Network):
         
         nbatch = int(len(X)/batchsize)
 
+        init_val = self.batch_iterated
+        self.batch_iterated = 0
+
         batch_iterated_ph = th.shared(np.array(self.batch_iterated, dtype=dtype), 'batch number placeholder')
         repar_speed = th.shared(np.array(self.repar_speed, dtype=dtype), 'repar speed constant')
-        loss_scaler = 1/(1 + tt.exp(-batch_iterated_ph*repar_speed))
+        loss_scaler = 1/(1 + tt.exp(-batch_iterated_ph*repar_speed - np.array(init_val, dtype)))
 
         if not self.loss_final:
 
@@ -200,6 +203,7 @@ class Model(Network):
 
         train = th.function([self.input.input, self.y,
                              In(self.input.sample_size, value=sample_size)], updates=self.updates(grad, self.weights))
+
         try:
             for epoch in range(nepoch):
                 # update the number of passed epochs
