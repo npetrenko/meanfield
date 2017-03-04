@@ -195,15 +195,16 @@ class Model(Network):
 
         grad = th.grad(self.loss, self.weights)
 
-        grad_scaler = np.ones(len(self.weights), dtype)
+        grad_scaler = np.ones(shape=(len(self.weights),), dtype=dtype)
         for i in range(len(self.weights)):
             if i%2 == 1:
                 grad_scaler[i] *= scale_var_grad
 
-        grad_scaler = th.shared(grad_scaler,'gradient scaler')
+        grad_scaler = th.shared(grad_scaler, 'gradient scaler')
 
+        grad *= grad_scaler
         train = th.function([self.input.input, self.y,
-                             In(self.input.sample_size, value=sample_size)], updates=self.updates(grad*grad_scaler, self.weights))
+                             In(self.input.sample_size, value=sample_size)], updates=self.updates(grad, self.weights))
         to_write = None
         try:
             for epoch in range(nepoch):
