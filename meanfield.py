@@ -8,6 +8,7 @@ from tqdm import tqdm
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 from lasagne import updates
 from theano import In
+import traceback
 
 rng = RandomStreams()
 dtype = th.config.floatX
@@ -247,6 +248,11 @@ class Model(Network):
                         gc.collect()
                         in_tens = in_tens[shuffle, :]
                         in_tens_y = in_tens_y[shuffle, :]
+        except (Exception, BaseException) as exc:
+            if logfile:
+                logf.write(traceback.format_exc(exc))
+                logf.close()
+            raise exc
         finally:
             if logfile:
                 logf.close()
