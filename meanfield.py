@@ -69,7 +69,9 @@ class Dense(Layer):
 
         # calculate matrix multiplication for each sample and add bias
 
-        matrixes = tt.batched_dot(input_layer.output, activation_matrix)
+        #matrixes = tt.batched_dot(input_layer.output, activation_matrix)
+
+        matrixes = th.scan(lambda x,y: tt.dot(x,y), sequences=[input_layer.output, activation_matrix])
 
         # index = np.array([[i,i] for i in range(sample_size)], dtype='int')
 
