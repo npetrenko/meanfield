@@ -254,8 +254,8 @@ class Model(Network):
         finally:
             if logfile:
                 if to_write:
-                    logf.write(to_write)
-                logf.close()
+                    logs.write(to_write)
+                logs.close()
 
     def save(self, path):
         '''
