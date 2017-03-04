@@ -71,11 +71,11 @@ class Dense(Layer):
 
         #matrixes = tt.batched_dot(input_layer.output, activation_matrix)
 
-        mb = th.scan(lambda i: tt.dot(input_layer.output[i],activation_matrix[i]) + bias, sequences=[tt.arange(sample_size)])
+        mb, _ = th.scan(lambda i: tt.dot(input_layer.output[i],activation_matrix[i]), sequences=[tt.arange(sample_size)])
 
         # index = np.array([[i,i] for i in range(sample_size)], dtype='int')
 
-        self.logits = mb
+        self.logits = mb + bias
 
         self.output = act(self.logits)
         print(self.output)
