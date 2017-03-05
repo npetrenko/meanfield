@@ -194,7 +194,7 @@ class Model(Network):
             self.batchsize = batchsize
 
         obj_fun = th.function([ self.input.input, self.y,
-                                In(self.input.sample_size, value=sample_size)], self.objective.mean())
+                                In(self.input.sample_size, value=sample_size)], self.objective/self.input.sample_size)
 
         grad = th.grad(self.loss, self.weights)
 
