@@ -143,10 +143,14 @@ class Model(Network):
         if loss == 'mse':
             def loss_func(preds, y):
                 return np.sqrt(np.mean((preds-y) ** 2))
+            def loss_func_nf(preds, y):
+                return ((preds-y) ** 2)
             self.match_loss = tt.sum(((self.output.output - self.y_ph) ** 2)) / (2 * self.target_std_deviation ** 2)
         elif loss == 'crossentropy':
             def loss_func(preds, y):
                 return np.mean(np.argmax(preds, axis=1) - np.argmax(y, axis=1) != 0)
+            def loss_func_nf(preds, y):
+                return np.argmax(preds, axis=1) - np.argmax(y, axis=1) != 0
             sh = output.output.shape
             out_resh = output.output.reshape((sh[0]*sh[1], sh[2]))
             self.match_loss = tt.nnet.categorical_crossentropy(out_resh, self.y_ph.reshape((sh[0]*sh[1], sh[2]))).sum()
@@ -154,6 +158,7 @@ class Model(Network):
             Exception('No correct loss specified. Use either "mse" of "crossentropy"')
 
         self.loss_func = loss_func
+        self.loss_func_nf = loss_func_nf
 
         self.objective = self.match_loss + self.var_loss
 
@@ -223,10 +228,12 @@ class Model(Network):
                     obj = obj_fun(in_tens, in_tens_y)
 
                     if valid_set is not None:
-                        preds = self.predict(valid_set[0].astype(dtype), prediction_sample_size=100, train_mode=True)
+                        preds, std = self.predict(valid_set[0].astype(dtype), prediction_sample_size=100, train_mode=True, return_std=True)
                         valid_mse = self.loss_func(preds, valid_set[1])
-                        logstr = 'epoch: {} \n  train error: {} \n  valid_error: {} \n  objective: {}\n  loss_scale: {}\n\n'.format(epoch,
-                                                                                                                         train_mse, valid_mse, obj, loss_scaler.eval())
+                        losses = self.loss_func_nf(preds, valid_set[1])
+                        corr = np.sum((losses - np.mean(losses))*(std-np.mean(std))/(np.std(std)*np.std(losses)))
+                        logstr = 'epoch: {} \n  train error: {} \n  valid_error: {} \n  objective: {}\n  loss_scale: {}\n  loss-std corr: {}\n\n'.format(epoch,
+                                                                                                                         train_mse, valid_mse, obj, loss_scaler.eval(), corr)
                     else:
                         logstr = 'epoch: {} \n  train error: {} \n  objective: {}\n  loss_scale: {}\n\n'.format(epoch, train_mse, obj, loss_scaler.eval())
                     #print('epoch: {} \n objective: {}\n\n\n'.format(epoch, obj))
