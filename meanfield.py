@@ -158,7 +158,7 @@ class Model(Network):
                 return np.argmax(preds, axis=1) - np.argmax(y, axis=1) != 0
             sh = output.output.shape
             out_resh = output.output.reshape((sh[0]*sh[1], sh[2]))
-            self.match_loss = tt.nnet.categorical_crossentropy(out_resh, self.y_ph[self.batch_iter_number].reshape((sh[0]*sh[1], sh[2]))).sum()
+            self.match_loss = tt.nnet.categorical_crossentropy(out_resh, self.y_ph[input.batch_iter_number].reshape((sh[0]*sh[1], sh[2]))).sum()
         else:
             Exception('No correct loss specified. Use either "mse" of "crossentropy"')
 
