@@ -425,7 +425,6 @@ class Model(Network):
                 preds.append(pred_ostep()[:min(act, batchsize), :])
                 if (i+1)*batchsize > len(X)-1:
                     break
-            print(np.shape(preds))
             return np.concatenate(preds, axis=0)
 
         def get_match_loss (X,y):
