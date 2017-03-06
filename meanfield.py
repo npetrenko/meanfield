@@ -443,11 +443,14 @@ class Model(Network):
             for i in range(int(len(X)/number_of_batches_to_push)):
                 ran = (i * number_of_batches_to_push * batchsize,
                        (i+1) * number_of_batches_to_push * batchsize)
-
+                if ran[1] > len(X)-1:
+                    break
                 batch_placeholder.set_value(
                     X[ran[0]:ran[1]].reshape((number_of_batches_to_push, batchsize, X.shape[-1]))
                 )
-                y_placeholder.set_value(y[ran[0]:ran[1]].reshape((number_of_batches_to_push, batchsize, y.shape[-1])))
+                y_placeholder.set_value(
+                    y[ran[0]:ran[1]].reshape((number_of_batches_to_push, batchsize, y.shape[-1]))
+                )
 
                 for j in range(number_of_batches_to_push):
                     train(j)
