@@ -449,7 +449,7 @@ class Model(Network):
                 )
                 y_placeholder.set_value(y[ran[0]:ran[1]].reshape((number_of_batches_to_push, batchsize, y.shape[-1])))
 
-                for j in range(ran[1]-ran[0]):
+                for j in range(number_of_batches_to_push):
                     train(j)
 
 
