@@ -98,7 +98,9 @@ class Input(Layer):
         :param dim: number of sensors in the first layer
         :return: instance of input layer calss
         '''
-        self.input = tt.matrix(name='input', dtype=dtype)
+        self.batch_placeholder = th.shared(None, name='batch placeholder')
+        self.batch_iter_number = tt.iscalar(name='batch iterator', dtype=dtype)
+        self.input = self.batch_placeholder[self.batch_iter_number]
         self.sample_size = tt.iscalar('sample size controller')
         self.output = tt.tile(self.input, (self.sample_size, 1, 1))
         self.dim = dim
@@ -162,7 +164,10 @@ class Model(Network):
 
         self.objective = self.match_loss + self.var_loss
 
-    def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1, running_backup_dir=None, scale_var_grad=1, logfile=None):
+    def fit_old(self, X, y, nepoch, batchsize, log_freq=100, valid_set = None, shuffle_freq = 1, running_backup_dir=None, scale_var_grad=1, logfile=None, number_of_batches_to_push = 10):
+
+        batch_placeholder = self.input.batch_placeholder
+        y_batch_placeholder = th.shared()
 
         if logfile:
             logs = open(logfile,'w')
@@ -353,6 +358,70 @@ class Model(Network):
                 return np.concatenate(temp, axis=0), np.concatenate(stds, axis=0)
             else:
                 return np.concatenate(temp, axis=0)
+
+    def fit(self, X, y, nepoch, batchsize, log_freq=100, valid_set=None, shuffle_freq=1, running_backup_dir=None,
+            scale_var_grad=1, logfile=None, number_of_batches_to_push=10):
+
+        X = X.astype(dtype)
+        y = y.astype(dtype)
+
+        sample_size = self.sample_size
+        nbatch = int(len(X) / batchsize)
+
+        if not self.loss_final:
+
+            loss = self.match_loss + self.var_loss / (nbatch * 1.)
+            loss = loss / sample_size
+            self.loss = loss
+            self.loss_final = True
+
+            # remember batchsize in case of change
+            self.batchsize = batchsize
+
+        # reconfigure loss in case of batch size change
+        if self.loss_final and self.batchsize != batchsize:
+            loss = self.match_loss + self.var_loss / (nbatch * 1.)
+            loss /= sample_size
+            self.loss = loss
+            self.batchsize = batchsize
+
+        batch_placeholder = self.input.batch_placeholder
+        y_placeholder = th.shared()
+
+        train = th.function([self.input.batch_iter_number], updates=self.updates(self.loss, self.weights))
+
+        pred_ostep = th.function([In(self.input.batch_iter_number, 0)], self.output.output.mean(axis=0))
+
+        def obtain_pred (X):
+            preds = []
+            for i in range(int(len(X)/batchsize) + 1):
+                ran = (i*batchsize, min((i+1)*batchsize, len(X)-1))
+                batch_placeholder.set_value(X[ran[0]:ran[1]])
+                preds.append(pred_ostep())
+                if (i+1)*batchsize > len(X)-1:
+                    break
+            return np.concatenate(preds, axis=0)
+
+        def get_match_loss (X,y):
+            preds = obtain_pred(X)
+            return self.loss_func(preds=preds, y=y)
+
+        for epoch in range(nepoch):
+
+            if epoch % log_freq == 0:
+                pred_loss = get_match_loss(X,y)
+                print(
+                    'epoch: {}\n  train_loss: {}\n\n'.format(epoch, pred_loss)
+                )
+
+            for i in range(int(len(X)/number_of_batches_to_push) + 1):
+                ran = (i*number_of_batches_to_push, min((i+1)*number_of_batches_to_push, len(X)-1))
+                batch_placeholder.set_value(X[ran[0]:ran[1]])
+                y_placeholder.set_value(y[ran[0]:ran[1]])
+
+                for j in range(ran[1]-ran[0]):
+                    train(j)
+
 
 
 
