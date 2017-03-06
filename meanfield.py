@@ -150,7 +150,7 @@ class Model(Network):
                 return np.sqrt(np.mean((preds-y) ** 2))
             def loss_func_nf(preds, y):
                 return ((preds-y) ** 2)
-            self.match_loss = tt.sum(((self.output.output - self.y_ph) ** 2)) / (2 * self.target_std_deviation ** 2)
+            self.match_loss = tt.sum(((self.output.output - self.y_ph[self.batch_iter_number]) ** 2)) / (2 * self.target_std_deviation ** 2)
         elif loss == 'crossentropy':
             def loss_func(preds, y):
                 return np.mean(np.argmax(preds, axis=1) - np.argmax(y, axis=1) != 0)
@@ -158,7 +158,7 @@ class Model(Network):
                 return np.argmax(preds, axis=1) - np.argmax(y, axis=1) != 0
             sh = output.output.shape
             out_resh = output.output.reshape((sh[0]*sh[1], sh[2]))
-            self.match_loss = tt.nnet.categorical_crossentropy(out_resh, self.y_ph.reshape((sh[0]*sh[1], sh[2]))).sum()
+            self.match_loss = tt.nnet.categorical_crossentropy(out_resh, self.y_ph[self.batch_iter_number].reshape((sh[0]*sh[1], sh[2]))).sum()
         else:
             Exception('No correct loss specified. Use either "mse" of "crossentropy"')
 
