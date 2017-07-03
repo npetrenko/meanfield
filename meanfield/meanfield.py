@@ -13,7 +13,6 @@ import traceback
 rng = RandomStreams()
 dtype = th.config.floatX
 
-
 class Model(Network):
 
     def __init__(self, input, output, nnupdates=updates.adam, loss = 'mse', init_value_loss_repar = -3, loss_rapar_speed = 1):
