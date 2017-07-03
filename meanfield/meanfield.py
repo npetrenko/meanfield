@@ -9,10 +9,10 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 from lasagne import updates
 from theano import In
 import traceback
+from meanfield.layers.base import *
 
 rng = RandomStreams()
 dtype = th.config.floatX
-
 
 class Model(Network):
 
