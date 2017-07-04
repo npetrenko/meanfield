@@ -3,7 +3,7 @@ from meanfield.layers.base import *
 class Dense(Layer):
     initial_sigma = -6
 
-    def __init__(self, dim, input_layer, act=tt.nnet.relu, prior=3, name=''):
+    def __init__(self, dim, input_layer, act=tt.nnet.relu, prior=3, name='', mask=1):
         '''
         initialize dense layer
         :param dim: number of neurons in the layer
@@ -48,13 +48,13 @@ class Dense(Layer):
 
         self.logits = mb + bias
         shape = self.logits.shape
-        self.output = act(self.logits.reshape((-1,shape[-1]))).reshape(shape)
+        self.output = act(self.logits.reshape((-1,shape[-1]))*mask).reshape(shape)
         print(self.output)
 
         # ...
-        l1 = tt.sum(-tt.log(np.sqrt(2 * pi) * self.sigma)) + tt.sum(-tt.log(np.sqrt(2 * pi) * self.sigma_const))
+        l1 = tt.sum(-tt.log(np.sqrt(2 * pi) * self.sigma) * mask) + tt.sum(-tt.log(np.sqrt(2 * pi) * self.sigma_const))
         # prior loss
-        l2 = (-tt.sum((activation_matrix ** 2)) - tt.sum((bias ** 2))) / (2 * prior ** 2)
+        l2 = (-tt.sum(((activation_matrix ** 2) * mask)) - tt.sum((bias ** 2))) / (2 * prior ** 2)
         # feeding loss to the next layer
         self.loss = l1 - l2
         

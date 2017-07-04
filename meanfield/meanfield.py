@@ -45,8 +45,8 @@ class Model(Network):
         self.updates = nnupdates
         self.batch_iterated = init_value_loss_repar
         self.repar_speed = loss_rapar_speed
-
-
+        def clip(t):
+            return tt.clip(t)
 
         if loss == 'mse':
             def loss_func(preds, y):
@@ -55,6 +55,7 @@ class Model(Network):
                 return ((preds-y) ** 2)
             self.match_loss = tt.sum(((self.output.output - self.y_ph) ** 2)) / (2 * self.target_std_deviation ** 2)
         elif loss == 'crossentropy':
+            preds = clip(preds)
             def loss_func(preds, y):
                 return np.mean(np.argmax(preds, axis=1) - np.argmax(y, axis=1) != 0)
             def loss_func_nf(preds, y):
